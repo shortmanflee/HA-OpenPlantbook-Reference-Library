@@ -1,0 +1,126 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuration de l'API Plant Sensor",
+        "description": "Entrez vos identifiants API OpenPlantBook.",
+        "data": {
+          "client_id": "ID Client",
+          "secret": "Secret"
+        },
+        "data_description": {
+          "client_id": "Votre ID client API OpenPlantBook depuis les paramètres de votre compte.",
+          "secret": "Votre clé secrète API OpenPlantBook pour l'authentification."
+        }
+      },
+      "image_config": {
+        "title": "Configuration du téléchargement d'images",
+        "description": "Configurez le téléchargement d'images des plantes.",
+        "data": {
+          "download_images": "Télécharger les images des plantes",
+          "download_path": "Chemin de téléchargement pour les images"
+        },
+        "data_description": {
+          "download_images": "Activer le téléchargement automatique d'images des plantes depuis OpenPlantBook.",
+          "download_path": "Chemin local où les images des plantes seront stockées (relatif à la config Home Assistant)."
+        }
+      }
+    },
+    "error": {
+      "client_id_required": "L'ID client est requis",
+      "secret_required": "Le secret est requis",
+      "invalid_path": "Chemin de téléchargement invalide"
+    },
+    "abort": {
+      "already_configured": "La plante est déjà configurée",
+      "missing_dependency": "La dépendance requise est manquante",
+      "missing_api_credentials": "Les identifiants API sont manquants",
+      "invalid_source": "Source de configuration invalide"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options Plant Sensor",
+        "description": "Configurez les paramètres de téléchargement d'images.",
+        "data": {
+          "download_images": "Télécharger les images des plantes",
+          "download_path": "Chemin de téléchargement pour les images"
+        },
+        "data_description": {
+          "download_images": "Activer le téléchargement automatique d'images des plantes depuis OpenPlantBook.",
+          "download_path": "Chemin local où les images des plantes seront stockées (relatif à la config Home Assistant)."
+        }
+      }
+    },
+    "error": {
+      "invalid_path": "Chemin de téléchargement invalide"
+    },
+    "abort": {
+      "reauth_required": "Réauthentification requise"
+    }
+  },
+  "config_subentries": {
+    "plant": {
+      "initiate_flow": {
+        "user": "Ajouter une plante"
+      },
+      "entry_type": "Emplacement de plante",
+      "step": {
+        "user": {
+          "title": "Rechercher une plante",
+          "description": "Entrez le nom d'une plante à rechercher.",
+          "data": {
+            "plant_name": "Nom de la plante"
+          },
+          "data_description": {
+            "plant_name": "Entrez le nom de la plante pour rechercher dans la base de données OpenPlantBook les informations de soin."
+          }
+        },
+        "configure_plant": {
+          "title": "Configurer la plante",
+          "description": "Configurez les paramètres de la plante pour {plant_name}.",
+          "data": {
+            "friendly_name": "Nom convivial",
+            "scientific_name": "Nom scientifique",
+            "common_name": "Nom commun",
+            "categories": "Catégories",
+            "min_light": "Niveau de lumière minimum (lux)",
+            "max_light": "Niveau de lumière maximum (lux)",
+            "min_temp": "Température minimum (°C)",
+            "max_temp": "Température maximum (°C)",
+            "min_humidity": "Humidité minimum (%)",
+            "max_humidity": "Humidité maximum (%)",
+            "min_moisture": "Humidité du sol minimum (%)",
+            "max_moisture": "Humidité du sol maximum (%)",
+            "min_soil_ec": "CE du sol minimum (mS/cm)",
+            "max_soil_ec": "CE du sol maximum (mS/cm)"
+          },
+          "data_description": {
+            "friendly_name": "Nom d'affichage pour cette plante dans Home Assistant. C'est ce que vous verrez dans l'interface utilisateur.",
+            "scientific_name": "Nom latin/scientifique utilisé pour l'identification de la plante et la recherche de données de soin.",
+            "common_name": "Nom commun ou surnom de la plante (ex: 'Plante serpent' pour Sansevieria).",
+            "categories": "Classifications de famille de plantes (ex: 'Tropicale', 'Succulente'). Utilisées pour l'organisation et les automatisations.",
+            "min_light": "Niveau de lumière minimum en lux requis pour une croissance saine.",
+            "max_light": "Niveau de lumière maximum en lux avant dommages potentiels.",
+            "min_temp": "Température minimum en Celsius pour une santé optimale de la plante.",
+            "max_temp": "Température maximum en Celsius avant stress.",
+            "min_humidity": "Pourcentage d'humidité minimum nécessaire pour une croissance saine.",
+            "max_humidity": "Pourcentage d'humidité maximum avant problèmes comme la moisissure.",
+            "min_moisture": "Pourcentage d'humidité du sol minimum avant arrosage nécessaire.",
+            "max_moisture": "Pourcentage d'humidité du sol maximum pour éviter la pourriture des racines.",
+            "min_soil_ec": "Conductivité électrique minimale du sol indiquant les niveaux de nutriments.",
+            "max_soil_ec": "CE maximale du sol avant brûlure de nutriments ou accumulation de sel."
+          }
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "plant": {
+        "name": "Plante"
+      }
+    }
+  }
+}
