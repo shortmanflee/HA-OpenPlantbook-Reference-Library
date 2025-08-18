@@ -67,10 +67,11 @@
   "config_subentries": {
     "flow_title": {
       "step": {
-        "user": "Open Plantbook Reference Library"
+        "user": {
+          "title": "Open Plantbook Reference Library"
+        }
       }
     },
-    "reconfigure_successful": "Open Plantbook Reference Library",
     "plant": {
       "flow_title": "Add Plant - {name}",
       "initiate_flow": {
