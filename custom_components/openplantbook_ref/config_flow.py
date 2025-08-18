@@ -250,8 +250,8 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Create schema for image configuration
         IMAGE_CONFIG_SCHEMA = vol.Schema(
             {
-                vol.Optional("download_images", default=False): bool,
-                vol.Optional("download_path", default="www/images/plants/"): str,
+            vol.Optional("download_images", default=False): bool,
+            vol.Optional("download_path", default="www/images/plants/"): str,
             }
         )
 
