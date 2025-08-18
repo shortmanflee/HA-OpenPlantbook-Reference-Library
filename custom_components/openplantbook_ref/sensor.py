@@ -255,7 +255,7 @@ class PlantSensor(SensorEntity):
         return self._friendly_name or self._plant_name
 
     @property
-    def extra_state_attributes(self) -> dict[str, any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return the extra state attributes."""
         attributes = {}
 
