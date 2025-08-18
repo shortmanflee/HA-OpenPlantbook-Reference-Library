@@ -70,6 +70,11 @@
         "user": {
           "title": "Open Plantbook Reference Library"
         }
+      },
+      "abort": {
+        "already_configured": "This configuration already exists",
+        "reauth_required": "Reauthentication required",
+        "reconfigure_successful": "Plant configuration updated successfully"
       }
     },
     "plant": {
