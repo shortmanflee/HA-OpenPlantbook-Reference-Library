@@ -5,13 +5,12 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import logging
-from pathlib import Path
 import re
-from typing import Any
 import urllib.parse
+from pathlib import Path
+from typing import Any
 
 import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.config_entries import SOURCE_REAUTH
 from homeassistant.core import HomeAssistant, callback
@@ -64,11 +63,13 @@ def _get_existing_categories(hass: HomeAssistant) -> list[str]:
 def _get_categories_options(
     hass: HomeAssistant, additional_categories: list[str] | str | None = None
 ) -> list[str]:
-    """Get list of categories from existing plants for dropdown options.
+    """
+    Get list of categories from existing plants for dropdown options.
 
     Args:
         hass: Home Assistant instance
         additional_categories: Extra categories to include (e.g., from OpenPlantBook)
+
     """
     existing_categories = set(_get_existing_categories(hass))
 
@@ -99,7 +100,8 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._data: dict | None = None
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
-        """Show the setup form to the user and handle API credentials input.
+        """
+        Show the setup form to the user and handle API credentials input.
 
         Note: Plant devices/entities are only created via subentry flows
         (PlantSubentryFlowHandler), not in this main config flow.
@@ -157,7 +159,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         "API credentials validation failed - invalid authentication"
                     )
                     errors["base"] = "invalid_auth"
-                except Exception as err:  # noqa: PERF203  # Config flows should be robust
+                except Exception as err:  # Config flows should be robust
                     _LOGGER.error(
                         "API credentials validation failed - connection error: %s", err
                     )

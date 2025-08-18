@@ -10,7 +10,8 @@ ATTR_IMAGE = "image_url"
 
 
 def generate_device_id(plant_data: dict) -> str:
-    """Generate a stable device ID from plant data.
+    """
+    Generate a stable device ID from plant data.
 
     This creates a stable, user-friendly device identifier.
     For plants from OpenPlantBook, uses the plant_id.
