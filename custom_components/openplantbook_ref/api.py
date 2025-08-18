@@ -4,9 +4,15 @@ from __future__ import annotations
 
 import importlib.util
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.exceptions import ConfigEntryAuthFailed
+
+if TYPE_CHECKING:
+    if importlib.util.find_spec("openplantbook_sdk"):
+        from openplantbook_sdk import OpenPlantBookApi
+    else:
+        OpenPlantBookApi = object
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,7 +42,7 @@ class AsyncConfigEntryAuth:
         self.secret = secret
         self._api = None
 
-    async def get_api_client(self):
+    async def get_api_client(self) -> Any:
         """Get or create the API client."""
         if self._api is None:
             _LOGGER.debug("Creating new OpenPlantBook API client")
@@ -44,21 +50,22 @@ class AsyncConfigEntryAuth:
                 _LOGGER.error(
                     "OpenPlantBook SDK not available - cannot create API client"
                 )
-                raise ConfigEntryAuthFailed("OpenPlantBook SDK not available")
+                msg = "OpenPlantBook SDK not available"
+                raise ConfigEntryAuthFailed(msg)
             # Import here to handle optional dependency
             from openplantbook_sdk import OpenPlantBookApi  # noqa: PLC0415
 
             try:
                 self._api = OpenPlantBookApi(self.client_id, self.secret)
                 _LOGGER.info("OpenPlantBook API client created successfully")
-            except Exception as err:
-                _LOGGER.error("Failed to create OpenPlantBook API client: %s", err)
+            except Exception:
+                _LOGGER.exception("Failed to create OpenPlantBook API client")
                 raise
         else:
             _LOGGER.debug("Reusing existing OpenPlantBook API client")
         return self._api
 
-    async def async_plant_search(self, plant_name: str) -> dict[str, Any]:
+    async def async_plant_search(self, plant_name: str) -> Any:
         """Search for plants with authentication error handling."""
         _LOGGER.info("Searching for plant: %s", plant_name)
         api = await self.get_api_client()
@@ -76,11 +83,11 @@ class AsyncConfigEntryAuth:
                     plant_name,
                     err,
                 )
-                raise ConfigEntryAuthFailed(f"Authentication failed: {err}") from err
-            _LOGGER.error(
-                "Non-authentication error during plant search for '%s': %s",
+                msg = f"Authentication failed: {err}"
+                raise ConfigEntryAuthFailed(msg) from err
+            _LOGGER.exception(
+                "Non-authentication error during plant search for '%s'",
                 plant_name,
-                err,
             )
             raise
         else:
@@ -106,15 +113,16 @@ class AsyncConfigEntryAuth:
             # Check if this is an authentication error
             if self._is_auth_error(err):
                 _LOGGER.warning(
-                    "Authentication error detected during plant detail fetch for ID '%s': %s",
+                    "Authentication error detected during plant detail fetch "
+                    "for ID '%s': %s",
                     plant_id,
                     err,
                 )
-                raise ConfigEntryAuthFailed(f"Authentication failed: {err}") from err
-            _LOGGER.error(
-                "Non-authentication error during plant detail fetch for ID '%s': %s",
+                msg = f"Authentication failed: {err}"
+                raise ConfigEntryAuthFailed(msg) from err
+            _LOGGER.exception(
+                "Non-authentication error during plant detail fetch for ID '%s'",
                 plant_id,
-                err,
             )
             raise
         else:

@@ -4,6 +4,9 @@ from homeassistant.util import slugify
 
 DOMAIN = "openplantbook_ref"
 
+# HTTP status codes
+HTTP_OK = 200
+
 # Image download constants
 DEFAULT_IMAGE_PATH = "/config/www/images/plants/"
 ATTR_IMAGE = "image_url"

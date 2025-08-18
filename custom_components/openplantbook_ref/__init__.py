@@ -20,7 +20,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+async def async_setup(_hass: HomeAssistant, _config: dict) -> bool:
     """Set up the Plant Sensor integration from yaml (not used)."""
     return True
 

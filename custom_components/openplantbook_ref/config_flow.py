@@ -21,7 +21,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import raise_if_invalid_filename, slugify
 
 from .api import AsyncConfigEntryAuth
-from .const import DOMAIN, generate_device_id
+from .const import DOMAIN, HTTP_OK, generate_device_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             user_input is not None,
         )
         errors = {}
-        API_CREDENTIALS_SCHEMA = vol.Schema(
+        api_credentials_schema = vol.Schema(
             {
                 vol.Required("client_id"): str,
                 vol.Required("secret"): str,
@@ -126,7 +126,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             entry = self._get_reauth_entry()
             default_client_id = entry.data.get("client_id", "")
             _LOGGER.debug("Using existing client_id for reauth: %s", default_client_id)
-            API_CREDENTIALS_SCHEMA = vol.Schema(
+            api_credentials_schema = vol.Schema(
                 {
                     vol.Required("client_id", default=default_client_id): str,
                     vol.Required("secret"): str,
@@ -155,13 +155,13 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     await auth.get_api_client()
                     _LOGGER.info("API credentials validated successfully")
                 except ConfigEntryAuthFailed:
-                    _LOGGER.error(
+                    _LOGGER.exception(
                         "API credentials validation failed - invalid authentication"
                     )
                     errors["base"] = "invalid_auth"
-                except Exception as err:  # Config flows should be robust
-                    _LOGGER.error(
-                        "API credentials validation failed - connection error: %s", err
+                except Exception:  # Config flows should be robust
+                    _LOGGER.exception(
+                        "API credentials validation failed - connection error"
                     )
                     errors["base"] = "cannot_connect"
 
@@ -169,16 +169,18 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     _LOGGER.debug("Showing form again due to validation errors")
                     return self.async_show_form(
                         step_id="user",
-                        data_schema=API_CREDENTIALS_SCHEMA,
+                        data_schema=api_credentials_schema,
                         errors=errors,
                         description_placeholders={},
                     )
 
                 if self.source == SOURCE_REAUTH:
-                    # For reauth, we keep the existing unique ID and just update credentials
+                    # For reauth, we keep the existing unique ID and just update
+                    # credentials
                     _LOGGER.info("Updating existing entry with new credentials")
                     entry = self._get_reauth_entry()
-                    # Ensure we're updating the same entry by using its existing unique_id
+                    # Ensure we're updating the same entry by using its existing
+                    # unique_id
                     await self.async_set_unique_id(entry.unique_id)
                     self._abort_if_unique_id_mismatch()
                     # Update the existing entry with new credentials
@@ -209,7 +211,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         _LOGGER.debug("Showing initial API credentials form")
         return self.async_show_form(
             step_id="user",
-            data_schema=API_CREDENTIALS_SCHEMA,
+            data_schema=api_credentials_schema,
             errors=errors,
             description_placeholders={},
         )
@@ -250,21 +252,21 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
 
         # Create schema for image configuration
-        IMAGE_CONFIG_SCHEMA = vol.Schema(
+        image_config_schema = vol.Schema(
             {
-            vol.Optional("download_images", default=False): bool,
-            vol.Optional("download_path", default="www/images/plants/"): str,
+                vol.Optional("download_images", default=False): bool,
+                vol.Optional("download_path", default="www/images/plants/"): str,
             }
         )
 
         return self.async_show_form(
             step_id="image_config",
-            data_schema=IMAGE_CONFIG_SCHEMA,
+            data_schema=image_config_schema,
             errors=errors,
             description_placeholders={},
         )
 
-    async def async_step_reauth(self, entry_data: dict[str, Any]) -> FlowResult:
+    async def async_step_reauth(self, _entry_data: dict[str, Any]) -> FlowResult:
         """Perform reauth upon an API authentication error."""
         return await self.async_step_reauth_confirm()
 
@@ -282,7 +284,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @classmethod
     @callback
     def async_get_supported_subentry_types(
-        cls, config_entry: config_entries.ConfigEntry
+        cls, _config_entry: config_entries.ConfigEntry
     ) -> dict[str, type[config_entries.ConfigSubentryFlow]]:
         """Return subentries supported by this integration."""
         return {"plant": PlantSubentryFlowHandler}
@@ -290,7 +292,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: config_entries.ConfigEntry,
+        _config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
         return OptionsFlowHandler()
@@ -340,7 +342,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
                 _LOGGER.debug("Requesting URL: %s", url)
                 resp = await websession.get(url)
                 _LOGGER.debug("Response status: %d", resp.status)
-                if resp.status != 200:
+                if resp.status != HTTP_OK:
                     _LOGGER.warning(
                         "Downloading '%s' failed, status_code=%d", url, resp.status
                     )
@@ -360,8 +362,8 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             _LOGGER.debug("Downloading of %s done", url)
             return str(path_obj)
 
-        except (TimeoutError, OSError) as err:
-            _LOGGER.error("Failed to download image %s: %s", url, err)
+        except (TimeoutError, OSError):
+            _LOGGER.exception("Failed to download image %s", url)
             return False
 
     async def _handle_plant_image_download(
@@ -403,7 +405,8 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             "download_images setting: %s", parent_entry.data.get("download_images")
         )
 
-        # Default to True if download_images setting is missing (for backward compatibility)
+        # Default to True if download_images setting is missing
+        # (for backward compatibility)
         download_images = parent_entry.data.get("download_images", True)
         if not download_images:
             _LOGGER.debug("Image download disabled in config, skipping")
@@ -507,7 +510,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         )
 
     async def async_step_search_plants(
-        self, user_input: dict | None = None
+        self, _user_input: dict | None = None
     ) -> FlowResult:
         """Search for plants using openplantbook-sdk."""
         _LOGGER.info("Starting plant search for: %s", self._plant_name)
@@ -538,7 +541,8 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             results_list = search_results
             if isinstance(search_results, dict):
                 _LOGGER.debug("Search results is dict, looking for nested results")
-                # If the API returns a dict, look for common keys that might contain results
+                # If the API returns a dict, look for common keys that might
+                # contain results
                 if "results" in search_results:
                     results_list = search_results["results"]
                     _LOGGER.debug(
@@ -555,7 +559,8 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
                         "Found results in 'plants' key: %d items", len(results_list)
                     )
                 else:
-                    # If it's a dict but doesn't have expected keys, treat as single result
+                    # If it's a dict but doesn't have expected keys, treat as
+                    # single result
                     results_list = [search_results]
                     _LOGGER.debug("Treating dict as single result")
 
@@ -577,13 +582,13 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             self._plant_search_results = results_list
             return await self.async_step_select_plant()
 
-        except ConfigEntryAuthFailed as err:
-            _LOGGER.error(
-                "Authentication failed during plant search for '%s': %s",
+        except ConfigEntryAuthFailed:
+            _LOGGER.exception(
+                "Authentication failed during plant search for '%s'",
                 self._plant_name,
-                err,
             )
-            # Trigger reauth flow on the parent entry only if one isn't already in progress
+            # Trigger reauth flow on the parent entry only if one isn't already
+            # in progress
             parent_entry = self._get_entry()
             if not self._is_reauth_flow_in_progress(parent_entry.entry_id):
                 _LOGGER.info(
@@ -602,11 +607,10 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             else:
                 _LOGGER.debug("Reauth flow already in progress, not starting new one")
             return self.async_abort(reason="reauth_required")
-        except (ImportError, AttributeError, ConnectionError, TimeoutError) as err:
-            _LOGGER.error(
-                "Connection/import error during plant search for '%s': %s",
+        except (ImportError, AttributeError, ConnectionError, TimeoutError):
+            _LOGGER.exception(
+                "Connection/import error during plant search for '%s'",
                 self._plant_name,
-                err,
             )
             # Return to search step with error and preserve the plant name
             errors = {"base": "search_error"}
@@ -619,7 +623,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
                 step_id="user",
                 data_schema=plant_search_schema,
                 errors=errors,
-                description_placeholders={"error": str(err)},
+                description_placeholders={"error": "Connection error"},
             )
         except Exception as err:
             # Handle any other unexpected errors including aiohttp exceptions
@@ -711,7 +715,10 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         plant_options = [
             {
                 "value": plant.get("pid", ""),
-                "label": f"{plant.get('display_pid', plant.get('alias', 'Unknown'))} ({plant.get('category', '')})",
+                "label": (
+                    f"{plant.get('display_pid', plant.get('alias', 'Unknown'))} "
+                    f"({plant.get('category', '')})"
+                ),
             }
             for plant in self._plant_search_results
         ]
@@ -989,7 +996,8 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
                 )
             )
 
-            # Set friendly name to common name from OpenPlantBook, or scientific name as fallback
+            # Set friendly name to common name from OpenPlantBook, or scientific
+            # name as fallback
             defaults["friendly_name"] = (
                 defaults["scientific_name"] or defaults["common_name"]
             )
@@ -1311,7 +1319,8 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
                 plant_id,
                 err,
             )
-            # Trigger reauth flow on the parent entry only if one isn't already in progress
+            # Trigger reauth flow on the parent entry only if one isn't already
+            # in progress
             parent_entry = self._get_entry()
             if not self._is_reauth_flow_in_progress(parent_entry.entry_id):
                 self.hass.async_create_task(
@@ -1328,7 +1337,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             _LOGGER.warning("Failed to fetch plant details for %s: %s", plant_id, err)
 
     async def async_step_reconfigure(
-        self, user_input: dict | None = None
+        self, _user_input: dict | None = None
     ) -> FlowResult:
         """Handle reconfiguration of a plant subentry."""
         return await self.async_step_configure_plant_options()
@@ -1372,7 +1381,10 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         )
 
     async def _handle_configure_plant_options_input(
-        self, user_input: dict, current_data: dict, subentry
+        self,
+        user_input: dict,
+        current_data: dict,
+        subentry: config_entries.ConfigSubentry,
     ) -> FlowResult:
         """Handle user input for configure plant options."""
         # Extract values from sections
@@ -1617,9 +1629,12 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         current_categories = self._prepare_current_categories(current_data)
         plant_book_data = current_data.get("plant_book_data", {})
 
-        # Create helper function to get default value, preferring current data over OpenPlantbook data
-        def get_default_value(current_key, plantbook_key=None):
-            """Get default value from current data or OpenPlantbook data if current is None."""
+        # Create helper function to get default value, preferring current data
+        # over OpenPlantbook data
+        def get_default_value(
+            current_key: str, plantbook_key: str | None = None
+        ) -> Any:
+            """Get default value from current data or OpenPlantbook data."""
             current_value = current_data.get(current_key)
             if current_value is not None:
                 return current_value
@@ -1892,9 +1907,11 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         """Prepare current categories list for form display."""
         current_categories = current_data.get("categories", [])
 
-        # Ensure categories is a list for the multi-select component and apply proper case formatting
+        # Ensure categories is a list for the multi-select component and apply
+        # proper case formatting
         if isinstance(current_categories, str):
-            # Convert string to list by splitting on commas (for backward compatibility) and apply proper case
+            # Convert string to list by splitting on commas (for backward
+            # compatibility) and apply proper case
             return [
                 _to_proper_case(cat.strip())
                 for cat in current_categories.split(",")
