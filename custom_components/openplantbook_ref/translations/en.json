@@ -65,7 +65,9 @@
     }
   },
   "config_subentries": {
-    "flow_title": "Open Plantbook Reference Library",
+    "flow_title": {
+      "reconfigure_successful": "Open Plantbook Reference Library"
+    },
     "plant": {
       "flow_title": "Add Plant - {name}",
       "initiate_flow": {
@@ -139,7 +141,7 @@
             },
             "categories_section": {
               "name": "Categories",
-              "categories": "Plant family classifications, add as many as required",
+              "description": "Plant family classifications, add as many as required",
               "data": {
                 "categories": "Categories"
               },
