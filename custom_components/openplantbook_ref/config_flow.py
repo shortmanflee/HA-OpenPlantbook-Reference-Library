@@ -157,7 +157,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         "API credentials validation failed - invalid authentication"
                     )
                     errors["base"] = "invalid_auth"
-                except Exception as err:  # noqa: BLE001  # Config flows should be robust
+                except Exception as err:  # noqa: PERF203  # Config flows should be robust
                     _LOGGER.error(
                         "API credentials validation failed - connection error: %s", err
                     )
