@@ -72,15 +72,9 @@
         }
       },
       "abort": {
-        "already_configured": {
-          "title": "Configuration Already Exists"
-        },
-        "reauth_required": {
-          "title": "Reauthentication Required"
-        },
-        "reconfigure_successful": {
-          "title": "Reconfiguration Successful"
-        }
+        "already_configured": "Configuration exists",
+        "reauth_required": "Reauthentication required",
+        "reconfigure_successful": "Plant updated"
       }
     },
     "plant": {
