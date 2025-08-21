@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import SensorEntity
@@ -13,9 +14,33 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DOMAIN
+from custom_components.openplantbook_ref.const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class PlantConfig:
+    """Configuration data for a plant sensor."""
+
+    name: str
+    device_id: str
+    entity_picture: str | None = None
+    plant_id: str | None = None
+    scientific_name: str | None = None
+    common_name: str | None = None
+    categories: list[str] | None = None
+    friendly_name: str | None = None
+    min_light: int | None = None
+    max_light: int | None = None
+    min_temp: int | None = None
+    max_temp: int | None = None
+    min_humidity: int | None = None
+    max_humidity: int | None = None
+    min_moisture: int | None = None
+    max_moisture: int | None = None
+    min_soil_ec: int | None = None
+    max_soil_ec: int | None = None
 
 
 def _create_device_entities(device_info: dict, device_id: str) -> list[PlantSensor]:
@@ -50,27 +75,29 @@ def _create_device_entities(device_info: dict, device_id: str) -> list[PlantSens
     )
 
     # Create single plant entity with all min/max values as attributes
+    config = PlantConfig(
+        name=name,
+        device_id=device_id,
+        entity_picture=entity_picture,
+        plant_id=plant_id,
+        scientific_name=scientific_name,
+        common_name=common_name,
+        categories=categories,
+        friendly_name=friendly_name,
+        min_light=min_light,
+        max_light=max_light,
+        min_temp=min_temp,
+        max_temp=max_temp,
+        min_humidity=min_humidity,
+        max_humidity=max_humidity,
+        min_moisture=min_moisture,
+        max_moisture=max_moisture,
+        min_soil_ec=min_soil_ec,
+        max_soil_ec=max_soil_ec,
+    )
+
     entities = [
-        PlantSensor(
-            name=name,
-            device_id=device_id,
-            entity_picture=entity_picture,
-            plant_id=plant_id,
-            scientific_name=scientific_name,
-            common_name=common_name,
-            categories=categories,
-            friendly_name=friendly_name,
-            min_light=min_light,
-            max_light=max_light,
-            min_temp=min_temp,
-            max_temp=max_temp,
-            min_humidity=min_humidity,
-            max_humidity=max_humidity,
-            min_moisture=min_moisture,
-            max_moisture=max_moisture,
-            min_soil_ec=min_soil_ec,
-            max_soil_ec=max_soil_ec,
-        ),
+        PlantSensor(config),
     ]
 
     _LOGGER.debug("Created %d entities for device %s", len(entities), device_id)
@@ -163,68 +190,50 @@ class PlantSensor(SensorEntity):
         }
     )
 
-    def __init__(
-        self,
-        name: str,
-        device_id: str,
-        entity_picture: str | None = None,
-        plant_id: str | None = None,
-        scientific_name: str | None = None,
-        common_name: str | None = None,
-        categories: list[str] | None = None,
-        friendly_name: str | None = None,
-        min_light: int | None = None,
-        max_light: int | None = None,
-        min_temp: int | None = None,
-        max_temp: int | None = None,
-        min_humidity: int | None = None,
-        max_humidity: int | None = None,
-        min_moisture: int | None = None,
-        max_moisture: int | None = None,
-        min_soil_ec: int | None = None,
-        max_soil_ec: int | None = None,
-    ) -> None:
-        """Initialize the PlantSensor with all plant data."""
+    def __init__(self, config: PlantConfig) -> None:
+        """Initialize the PlantSensor with plant configuration data."""
         _LOGGER.debug(
-            "Initializing PlantSensor: name=%s, device_id=%s", name, device_id
+            "Initializing PlantSensor: name=%s, device_id=%s",
+            config.name,
+            config.device_id,
         )
 
-        self._device_id = device_id
-        self._plant_name = name
+        self._device_id = config.device_id
+        self._plant_name = config.name
         self._attr_name = "Plant"
-        self._attr_unique_id = f"{device_id}_plant"
-        self._attr_entity_picture = entity_picture
+        self._attr_unique_id = f"{config.device_id}_plant"
+        self._attr_entity_picture = config.entity_picture
 
         # Store plant metadata
-        self._plant_id = plant_id
-        self._scientific_name = scientific_name
-        self._common_name = common_name
-        self._categories = categories
-        self._friendly_name = friendly_name
+        self._plant_id = config.plant_id
+        self._scientific_name = config.scientific_name
+        self._common_name = config.common_name
+        self._categories = config.categories
+        self._friendly_name = config.friendly_name
 
         # Store min/max values
-        self._min_light = min_light
-        self._max_light = max_light
-        self._min_temp = min_temp
-        self._max_temp = max_temp
-        self._min_humidity = min_humidity
-        self._max_humidity = max_humidity
-        self._min_moisture = min_moisture
-        self._max_moisture = max_moisture
-        self._min_soil_ec = min_soil_ec
-        self._max_soil_ec = max_soil_ec
+        self._min_light = config.min_light
+        self._max_light = config.max_light
+        self._min_temp = config.min_temp
+        self._max_temp = config.max_temp
+        self._min_humidity = config.min_humidity
+        self._max_humidity = config.max_humidity
+        self._min_moisture = config.min_moisture
+        self._max_moisture = config.max_moisture
+        self._min_soil_ec = config.min_soil_ec
+        self._max_soil_ec = config.max_soil_ec
 
         # Set up device info (from the old base class)
         model_name = (
-            scientific_name
-            if scientific_name and scientific_name.strip()
+            config.scientific_name
+            if config.scientific_name and config.scientific_name.strip()
             else "Plant Reference"
         )
-        model_id = plant_id if plant_id else device_id
+        model_id = config.plant_id if config.plant_id else config.device_id
 
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, device_id)},
-            name=name,
+            identifiers={(DOMAIN, config.device_id)},
+            name=config.name,
             manufacturer="Plant Reference",
             model=model_name,
             model_id=model_id,
@@ -234,7 +243,7 @@ class PlantSensor(SensorEntity):
             "PlantSensor initialized - unique_id: %s, model: %s, categories: %s",
             self._attr_unique_id,
             model_name,
-            categories,
+            config.categories,
         )
 
     async def async_added_to_hass(self) -> None:
@@ -262,44 +271,35 @@ class PlantSensor(SensorEntity):
         """Return the extra state attributes."""
         attributes = {}
 
-        # Basic plant info
-        if self._scientific_name:
-            attributes["scientific_name"] = self._scientific_name
-        if self._common_name:
-            attributes["common_name"] = self._common_name
-        if self._categories:
-            attributes["categories"] = self._categories
-        if self._plant_id:
-            attributes["plant_id"] = self._plant_id
+        # Basic plant info - Group basic attributes together
+        basic_attrs = {
+            "scientific_name": self._scientific_name,
+            "common_name": self._common_name,
+            "categories": self._categories,
+            "plant_id": self._plant_id,
+        }
+        attributes.update({k: v for k, v in basic_attrs.items() if v is not None})
 
-        # Light attributes
-        if self._min_light is not None:
-            attributes["minimum_light"] = self._min_light
-        if self._max_light is not None:
-            attributes["maximum_light"] = self._max_light
+        # Min/Max attributes - Group ranges together
+        range_attrs = [
+            ("minimum_light", self._min_light),
+            ("maximum_light", self._max_light),
+            ("minimum_temperature", self._min_temp),
+            ("maximum_temperature", self._max_temp),
+            ("minimum_humidity", self._min_humidity),
+            ("maximum_humidity", self._max_humidity),
+            ("minimum_moisture", self._min_moisture),
+            ("maximum_moisture", self._max_moisture),
+            ("minimum_soil_ec", self._min_soil_ec),
+            ("maximum_soil_ec", self._max_soil_ec),
+        ]
 
-        # Temperature attributes
-        if self._min_temp is not None:
-            attributes["minimum_temperature"] = self._min_temp
-        if self._max_temp is not None:
-            attributes["maximum_temperature"] = self._max_temp
-
-        # Humidity attributes
-        if self._min_humidity is not None:
-            attributes["minimum_humidity"] = self._min_humidity
-        if self._max_humidity is not None:
-            attributes["maximum_humidity"] = self._max_humidity
-
-        # Moisture attributes
-        if self._min_moisture is not None:
-            attributes["minimum_moisture"] = self._min_moisture
-        if self._max_moisture is not None:
-            attributes["maximum_moisture"] = self._max_moisture
-
-        # Soil EC attributes
-        if self._min_soil_ec is not None:
-            attributes["minimum_soil_ec"] = self._min_soil_ec
-        if self._max_soil_ec is not None:
-            attributes["maximum_soil_ec"] = self._max_soil_ec
+        attributes.update(
+            {
+                attr_name: attr_value
+                for attr_name, attr_value in range_attrs
+                if attr_value is not None
+            }
+        )
 
         return attributes

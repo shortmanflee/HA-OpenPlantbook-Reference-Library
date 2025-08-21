@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from custom_components.openplantbook_ref.const import DOMAIN
 
 TO_REDACT = {"client_id", "secret"}
 

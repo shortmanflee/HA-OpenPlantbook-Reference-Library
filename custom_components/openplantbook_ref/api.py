@@ -42,7 +42,7 @@ class AsyncConfigEntryAuth:
         self.secret = secret
         self._api = None
 
-    async def get_api_client(self) -> Any:
+    async def get_api_client(self) -> Any:  # type: ignore[misc]
         """Get or create the API client."""
         if self._api is None:
             _LOGGER.debug("Creating new OpenPlantBook API client")
@@ -65,7 +65,7 @@ class AsyncConfigEntryAuth:
             _LOGGER.debug("Reusing existing OpenPlantBook API client")
         return self._api
 
-    async def async_plant_search(self, plant_name: str) -> Any:
+    async def async_plant_search(self, plant_name: str) -> Any:  # type: ignore[misc]
         """Search for plants with authentication error handling."""
         _LOGGER.info("Searching for plant: %s", plant_name)
         api = await self.get_api_client()

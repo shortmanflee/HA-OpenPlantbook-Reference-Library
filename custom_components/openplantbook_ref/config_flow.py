@@ -20,8 +20,12 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import raise_if_invalid_filename, slugify
 
-from .api import AsyncConfigEntryAuth
-from .const import DOMAIN, HTTP_OK, generate_device_id
+from custom_components.openplantbook_ref.api import AsyncConfigEntryAuth
+from custom_components.openplantbook_ref.const import (
+    DOMAIN,
+    HTTP_OK,
+    generate_device_id,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,7 +103,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize the PlantSensorConfigFlow."""
         self._data: dict | None = None
 
-    async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> Any:
         """
         Show the setup form to the user and handle API credentials input.
 
@@ -241,7 +245,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not errors:
                 # Store image config with API credentials
                 config_data = {
-                    **self._data,
+                    **(self._data or {}),
                     "download_images": download_images,
                     "download_path": download_path,
                 }
@@ -266,7 +270,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={},
         )
 
-    async def async_step_reauth(self, _entry_data: dict[str, Any]) -> FlowResult:
+    async def async_step_reauth(self, _entry_data: dict[str, Any]) -> Any:
         """Perform reauth upon an API authentication error."""
         return await self.async_step_reauth_confirm()
 
@@ -312,9 +316,10 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         """Check if a reauth flow is already in progress for the given config entry."""
         in_progress_flows = self.hass.config_entries.flow.async_progress()
         for flow in in_progress_flows:
+            context = flow.get("context", {})
             if (
-                flow["context"].get("source") == SOURCE_REAUTH
-                and flow["context"].get("entry_id") == entry_id
+                context.get("source") == SOURCE_REAUTH
+                and context.get("entry_id") == entry_id
             ):
                 _LOGGER.debug(
                     "Reauth flow already in progress for entry %s, flow_id: %s",
@@ -463,7 +468,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
                 downloaded_file,
             )
 
-    async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
+    async def async_step_user(self, user_input: dict | None = None) -> Any:
         """Handle the initial step where user enters plant name for search."""
         _LOGGER.debug(
             "Subentry flow async_step_user called with input: %s",
@@ -515,134 +520,107 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         """Search for plants using openplantbook-sdk."""
         _LOGGER.info("Starting plant search for: %s", self._plant_name)
 
-        if not OPENPLANTBOOK_AVAILABLE:
-            _LOGGER.error("OpenPlantBook SDK is not available")
-            return self.async_abort(reason="missing_dependency")
+        # Check prerequisites
+        validation_result = await self._validate_search_prerequisites()
+        if validation_result is not None:
+            return validation_result
 
+        try:
+            results_list = await self._perform_plant_search()
+            return await self._handle_search_results(results_list)
+
+        except ConfigEntryAuthFailed:
+            return await self._handle_auth_failure()
+        except (ImportError, AttributeError, ConnectionError, TimeoutError):
+            return await self._handle_connection_error()
+        except (ValueError, RuntimeError, TypeError):
+            return await self._handle_general_error()
+
+    async def _perform_plant_search(self) -> list:
+        """Perform the actual plant search and return processed results."""
         # Get API credentials from parent config entry
         parent_entry = self._get_entry()
         client_id = parent_entry.data.get("client_id")
         secret = parent_entry.data.get("secret")
-        _LOGGER.debug(
-            "Retrieved API credentials from parent entry %s", parent_entry.entry_id
+
+        # Check that we have the required credentials
+        if not client_id or not secret:
+            _LOGGER.error("Missing API credentials in parent entry")
+            msg = "missing_api_credentials"
+            raise ValueError(msg)
+
+        # Check that we have a plant name
+        if not self._plant_name:
+            _LOGGER.error("No plant name available for search")
+            msg = "missing_plant_name"
+            raise ValueError(msg)
+
+        # Use our API wrapper with authentication error handling
+        auth = AsyncConfigEntryAuth(client_id, secret)
+        _LOGGER.debug("Making API search request for plant: %s", self._plant_name)
+        search_results = await auth.async_plant_search(self._plant_name)
+
+        return self._extract_results_list(search_results)
+
+    def _extract_results_list(self, search_results: Any) -> list:  # type: ignore[misc]
+        """Extract results list from various API response formats."""
+        if isinstance(search_results, list):
+            return search_results
+
+        if not isinstance(search_results, dict):
+            return [search_results]
+
+        # Check common result keys
+        result_keys = ["results", "data", "plants"]
+        for key in result_keys:
+            if key in search_results:
+                _LOGGER.debug(
+                    "Found results in '%s' key: %d items", key, len(search_results[key])
+                )
+                return search_results[key]
+
+        # Treat dict as single result
+        _LOGGER.debug("Treating dict as single result")
+        return [search_results]
+
+    async def _handle_auth_failure(self) -> Any:
+        """Handle authentication failure during plant search."""
+        _LOGGER.exception(
+            "Authentication failed during plant search for '%s'", self._plant_name
         )
 
-        if not client_id or not secret:
-            _LOGGER.error("No API credentials found in parent config entry")
-            return self.async_abort(reason="missing_api_credentials")
-
-        try:
-            # Use our API wrapper with authentication error handling
-            auth = AsyncConfigEntryAuth(client_id, secret)
-            _LOGGER.debug("Making API search request for plant: %s", self._plant_name)
-            search_results = await auth.async_plant_search(self._plant_name)
-
-            # Handle the API response structure - search results might be nested
-            results_list = search_results
-            if isinstance(search_results, dict):
-                _LOGGER.debug("Search results is dict, looking for nested results")
-                # If the API returns a dict, look for common keys that might
-                # contain results
-                if "results" in search_results:
-                    results_list = search_results["results"]
-                    _LOGGER.debug(
-                        "Found results in 'results' key: %d items", len(results_list)
-                    )
-                elif "data" in search_results:
-                    results_list = search_results["data"]
-                    _LOGGER.debug(
-                        "Found results in 'data' key: %d items", len(results_list)
-                    )
-                elif "plants" in search_results:
-                    results_list = search_results["plants"]
-                    _LOGGER.debug(
-                        "Found results in 'plants' key: %d items", len(results_list)
-                    )
-                else:
-                    # If it's a dict but doesn't have expected keys, treat as
-                    # single result
-                    results_list = [search_results]
-                    _LOGGER.debug("Treating dict as single result")
-
-            if not results_list:
-                # No results found - offer manual entry option
-                _LOGGER.info("No search results found for plant: %s", self._plant_name)
-                return await self.async_step_no_results_found()
-
-            if len(results_list) == 1:
-                # Exactly one result - use it directly
-                _LOGGER.info("Found single search result for: %s", self._plant_name)
-                self._selected_plant = results_list[0]
-                return await self.async_step_configure_plant()
-
-            # Multiple results - show selection list
+        parent_entry = self._get_entry()
+        if not self._is_reauth_flow_in_progress(parent_entry.entry_id):
             _LOGGER.info(
-                "Found %d search results for: %s", len(results_list), self._plant_name
+                "Initiating reauth flow for parent entry: %s", parent_entry.entry_id
             )
-            self._plant_search_results = results_list
-            return await self.async_step_select_plant()
+            self.hass.async_create_task(
+                self.hass.config_entries.flow.async_init(
+                    DOMAIN,
+                    context={
+                        "source": SOURCE_REAUTH,
+                        "entry_id": parent_entry.entry_id,
+                    },
+                    data=parent_entry.data,
+                )
+            )
+        else:
+            _LOGGER.debug("Reauth flow already in progress, not starting new one")
+        return self.async_abort(reason="reauth_required")
 
-        except ConfigEntryAuthFailed:
-            _LOGGER.exception(
-                "Authentication failed during plant search for '%s'",
-                self._plant_name,
-            )
-            # Trigger reauth flow on the parent entry only if one isn't already
-            # in progress
-            parent_entry = self._get_entry()
-            if not self._is_reauth_flow_in_progress(parent_entry.entry_id):
-                _LOGGER.info(
-                    "Initiating reauth flow for parent entry: %s", parent_entry.entry_id
-                )
-                self.hass.async_create_task(
-                    self.hass.config_entries.flow.async_init(
-                        DOMAIN,
-                        context={
-                            "source": SOURCE_REAUTH,
-                            "entry_id": parent_entry.entry_id,
-                        },
-                        data=parent_entry.data,
-                    )
-                )
-            else:
-                _LOGGER.debug("Reauth flow already in progress, not starting new one")
-            return self.async_abort(reason="reauth_required")
-        except (ImportError, AttributeError, ConnectionError, TimeoutError):
-            _LOGGER.exception(
-                "Connection/import error during plant search for '%s'",
-                self._plant_name,
-            )
-            # Return to search step with error and preserve the plant name
-            errors = {"base": "search_error"}
-            plant_search_schema = vol.Schema(
-                {
-                    vol.Required("plant_name", default=self._plant_name or ""): str,
-                }
-            )
-            return self.async_show_form(
-                step_id="user",
-                data_schema=plant_search_schema,
-                errors=errors,
-                description_placeholders={"error": "Connection error"},
-            )
-        except Exception as err:
-            # Handle any other unexpected errors including aiohttp exceptions
-            _LOGGER.exception(
-                "Unexpected error searching for plants '%s'", self._plant_name
-            )
-            _LOGGER.debug("Full error details", exc_info=True)
-            errors = {"base": "search_error"}
-            plant_search_schema = vol.Schema(
-                {
-                    vol.Required("plant_name", default=self._plant_name or ""): str,
-                }
-            )
-            return self.async_show_form(
-                step_id="user",
-                data_schema=plant_search_schema,
-                errors=errors,
-                description_placeholders={"error": str(err)},
-            )
+    async def _handle_connection_error(self) -> Any:
+        """Handle connection/import errors during plant search."""
+        _LOGGER.exception(
+            "Connection/import error during plant search for '%s'", self._plant_name
+        )
+        return self._show_search_error_form("Connection error")
+
+    async def _handle_general_error(self) -> Any:
+        """Handle any other unexpected errors during plant search."""
+        _LOGGER.exception(
+            "Unexpected error searching for plants '%s'", self._plant_name
+        )
+        return self._show_search_error_form("Unexpected error occurred")
 
     async def async_step_no_results_found(
         self, user_input: dict | None = None
@@ -676,7 +654,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             step_id="no_results_found",
             data_schema=no_results_schema,
             errors={},
-            description_placeholders={"plant_name": self._plant_name},
+            description_placeholders={"plant_name": self._plant_name or ""},
         )
 
     async def async_step_select_plant(
@@ -712,22 +690,28 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
                 errors["base"] = "no_plant_selected"
 
         # Create selection options from search results
-        plant_options = [
-            {
-                "value": plant.get("pid", ""),
-                "label": (
-                    f"{plant.get('display_pid', plant.get('alias', 'Unknown'))} "
-                    f"({plant.get('category', '')})"
-                ),
-            }
+        plant_options: list[selector.SelectOptionDict] = [
+            selector.SelectOptionDict(
+                {
+                    "value": str(plant.get("pid", "")),
+                    "label": (
+                        f"{plant.get('display_pid', plant.get('alias', 'Unknown'))} "
+                        f"({plant.get('category', '')})"
+                    ),
+                }
+            )
             for plant in self._plant_search_results
         ]
 
         # Add manual entry and search again options
         plant_options.extend(
             [
-                {"value": "manual_entry", "label": "manual_entry"},
-                {"value": "search_again", "label": "search_again"},
+                selector.SelectOptionDict(
+                    {"value": "manual_entry", "label": "manual_entry"}
+                ),
+                selector.SelectOptionDict(
+                    {"value": "search_again", "label": "search_again"}
+                ),
             ]
         )
 
@@ -813,38 +797,87 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             "max_soil_ec": soil_ec_section.get("max_soil_ec"),
         }
 
+    async def _validate_search_prerequisites(self) -> Any:
+        """Validate prerequisites for plant search."""
+        if not OPENPLANTBOOK_AVAILABLE:
+            _LOGGER.error("OpenPlantBook SDK is not available")
+            return self.async_abort(reason="missing_dependency")
+
+        # Get API credentials from parent config entry
+        parent_entry = self._get_entry()
+        client_id = parent_entry.data.get("client_id")
+        secret = parent_entry.data.get("secret")
+
+        if not client_id or not secret:
+            _LOGGER.error("No API credentials found in parent config entry")
+            return self.async_abort(reason="missing_api_credentials")
+
+        return None
+
+    async def _handle_search_results(self, results_list: list) -> Any:
+        """Handle search results based on count."""
+        if not results_list:
+            # No results found - offer manual entry option
+            _LOGGER.info("No search results found for plant: %s", self._plant_name)
+            return await self.async_step_no_results_found()
+
+        if len(results_list) == 1:
+            # Exactly one result - use it directly
+            _LOGGER.info("Found single search result for: %s", self._plant_name)
+            self._selected_plant = results_list[0]
+            return await self.async_step_configure_plant()
+
+        # Multiple results - show selection list
+        _LOGGER.info(
+            "Found %d search results for: %s", len(results_list), self._plant_name
+        )
+        self._plant_search_results = results_list
+        return await self.async_step_select_plant()
+
+    def _show_search_error_form(self, error_message: str) -> FlowResult:
+        """Show search error form with the given error message."""
+        errors = {"base": "search_error"}
+        plant_search_schema = vol.Schema(
+            {
+                vol.Required("plant_name", default=self._plant_name or ""): str,
+            }
+        )
+        return self.async_show_form(
+            step_id="user",
+            data_schema=plant_search_schema,
+            errors=errors,
+            description_placeholders={"error": error_message},
+        )
+
     def _validate_required_fields(self, plant_data: dict) -> dict[str, str]:
         """Validate required fields."""
         errors = {}
 
-        if not plant_data["friendly_name"]:
-            errors["names_section"] = "friendly_name_required"
-        elif not plant_data["scientific_name"]:
-            errors["names_section"] = "scientific_name_required"
-        elif not plant_data["common_name"]:
-            errors["names_section"] = "common_name_required"
-        elif not plant_data["categories"]:
-            errors["categories_section"] = "categories_required"
-        elif plant_data["min_light"] is None:
-            errors["light_values_section"] = "min_light_required"
-        elif plant_data["max_light"] is None:
-            errors["light_values_section"] = "max_light_required"
-        elif plant_data["min_temp"] is None:
-            errors["temperature_values_section"] = "min_temp_required"
-        elif plant_data["max_temp"] is None:
-            errors["temperature_values_section"] = "max_temp_required"
-        elif plant_data["min_humidity"] is None:
-            errors["humidity_values_section"] = "min_humidity_required"
-        elif plant_data["max_humidity"] is None:
-            errors["humidity_values_section"] = "max_humidity_required"
-        elif plant_data["min_moisture"] is None:
-            errors["moisture_values_section"] = "min_moisture_required"
-        elif plant_data["max_moisture"] is None:
-            errors["moisture_values_section"] = "max_moisture_required"
-        elif plant_data["min_soil_ec"] is None:
-            errors["soil_ec_values_section"] = "min_soil_ec_required"
-        elif plant_data["max_soil_ec"] is None:
-            errors["soil_ec_values_section"] = "max_soil_ec_required"
+        # Define validation rules: (field_name, error_section, error_key, check_none)
+        validation_rules = [
+            ("friendly_name", "names_section", "friendly_name_required", False),
+            ("scientific_name", "names_section", "scientific_name_required", False),
+            ("common_name", "names_section", "common_name_required", False),
+            ("categories", "categories_section", "categories_required", False),
+            ("min_light", "light_values_section", "min_light_required", True),
+            ("max_light", "light_values_section", "max_light_required", True),
+            ("min_temp", "temperature_values_section", "min_temp_required", True),
+            ("max_temp", "temperature_values_section", "max_temp_required", True),
+            ("min_humidity", "humidity_values_section", "min_humidity_required", True),
+            ("max_humidity", "humidity_values_section", "max_humidity_required", True),
+            ("min_moisture", "moisture_values_section", "min_moisture_required", True),
+            ("max_moisture", "moisture_values_section", "max_moisture_required", True),
+            ("min_soil_ec", "soil_ec_values_section", "min_soil_ec_required", True),
+            ("max_soil_ec", "soil_ec_values_section", "max_soil_ec_required", True),
+        ]
+
+        for field_name, error_section, error_key, check_none in validation_rules:
+            field_value = plant_data.get(field_name)
+            if (check_none and field_value is None) or (
+                not check_none and not field_value
+            ):
+                errors[error_section] = error_key
+                break
 
         return errors
 
@@ -896,7 +929,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
 
         return errors
 
-    async def _create_plant_entry(self, user_input: dict) -> FlowResult:
+    async def _create_plant_entry(self, user_input: dict) -> Any:
         """Create the plant configuration entry."""
         plant_data = self._extract_plant_data(user_input)
 
@@ -1633,7 +1666,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         # over OpenPlantbook data
         def get_default_value(
             current_key: str, plantbook_key: str | None = None
-        ) -> Any:
+        ) -> str | None:  # type: ignore[misc]
             """Get default value from current data or OpenPlantbook data."""
             current_value = current_data.get(current_key)
             if current_value is not None:
@@ -1937,7 +1970,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             for flow in flows
         )
 
-    async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
+    async def async_step_init(self, user_input: dict | None = None) -> Any:
         """Configure image download settings."""
         # Check if reauthentication is required upfront
         if self._is_reauth_flow_in_progress(self.config_entry.entry_id):
