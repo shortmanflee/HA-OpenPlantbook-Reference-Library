@@ -220,9 +220,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={},
         )
 
-    async def async_step_image_config(
-        self, user_input: dict | None = None
-    ) -> Any:
+    async def async_step_image_config(self, user_input: dict | None = None) -> Any:
         """Configure image download options."""
         errors = {}
 
@@ -514,9 +512,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             description_placeholders={},
         )
 
-    async def async_step_search_plants(
-        self, _user_input: dict | None = None
-    ) -> Any:
+    async def async_step_search_plants(self, _user_input: dict | None = None) -> Any:
         """Search for plants using openplantbook-sdk."""
         _LOGGER.info("Starting plant search for: %s", self._plant_name)
 
@@ -622,9 +618,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         )
         return self._show_search_error_form("Unexpected error occurred")
 
-    async def async_step_no_results_found(
-        self, user_input: dict | None = None
-    ) -> Any:
+    async def async_step_no_results_found(self, user_input: dict | None = None) -> Any:
         """Handle case when no plants are found in search."""
         if user_input is not None:
             action = user_input.get("action")
@@ -657,9 +651,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             description_placeholders={"plant_name": self._plant_name or ""},
         )
 
-    async def async_step_select_plant(
-        self, user_input: dict | None = None
-    ) -> Any:
+    async def async_step_select_plant(self, user_input: dict | None = None) -> Any:
         """Handle plant selection when multiple plants are found."""
         errors = {}
 
@@ -733,9 +725,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             description_placeholders={"count": str(len(self._plant_search_results))},
         )
 
-    async def async_step_configure_plant(
-        self, user_input: dict | None = None
-    ) -> Any:
+    async def async_step_configure_plant(self, user_input: dict | None = None) -> Any:
         """Configure the selected plant with all details."""
         # If we just selected a plant, fetch its detailed information
         if self._selected_plant and "min_light_lux" not in self._selected_plant:
@@ -1369,9 +1359,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         except (ConnectionError, TimeoutError, ImportError, AttributeError) as err:
             _LOGGER.warning("Failed to fetch plant details for %s: %s", plant_id, err)
 
-    async def async_step_reconfigure(
-        self, _user_input: dict | None = None
-    ) -> Any:
+    async def async_step_reconfigure(self, _user_input: dict | None = None) -> Any:
         """Handle reconfiguration of a plant subentry."""
         return await self.async_step_configure_plant_options()
 
