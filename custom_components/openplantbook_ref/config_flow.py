@@ -14,7 +14,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import SOURCE_REAUTH
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult, SectionConfig, section
+from homeassistant.data_entry_flow import SectionConfig, section
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -222,7 +222,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_image_config(
         self, user_input: dict | None = None
-    ) -> FlowResult:
+    ) -> Any:
         """Configure image download options."""
         errors = {}
 
@@ -276,7 +276,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> Any:
         """Dialog that informs the user that reauth is required."""
         if user_input is None:
             return self.async_show_form(
@@ -516,7 +516,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
 
     async def async_step_search_plants(
         self, _user_input: dict | None = None
-    ) -> FlowResult:
+    ) -> Any:
         """Search for plants using openplantbook-sdk."""
         _LOGGER.info("Starting plant search for: %s", self._plant_name)
 
@@ -624,7 +624,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
 
     async def async_step_no_results_found(
         self, user_input: dict | None = None
-    ) -> FlowResult:
+    ) -> Any:
         """Handle case when no plants are found in search."""
         if user_input is not None:
             action = user_input.get("action")
@@ -659,7 +659,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
 
     async def async_step_select_plant(
         self, user_input: dict | None = None
-    ) -> FlowResult:
+    ) -> Any:
         """Handle plant selection when multiple plants are found."""
         errors = {}
 
@@ -735,7 +735,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
 
     async def async_step_configure_plant(
         self, user_input: dict | None = None
-    ) -> FlowResult:
+    ) -> Any:
         """Configure the selected plant with all details."""
         # If we just selected a plant, fetch its detailed information
         if self._selected_plant and "min_light_lux" not in self._selected_plant:
@@ -834,7 +834,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         self._plant_search_results = results_list
         return await self.async_step_select_plant()
 
-    def _show_search_error_form(self, error_message: str) -> FlowResult:
+    def _show_search_error_form(self, error_message: str) -> Any:
         """Show search error form with the given error message."""
         errors = {"base": "search_error"}
         plant_search_schema = vol.Schema(
@@ -980,7 +980,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             unique_id=device_id,
         )
 
-    def _show_plant_configuration_form(self, errors: dict[str, str]) -> FlowResult:
+    def _show_plant_configuration_form(self, errors: dict[str, str]) -> Any:
         """Show the plant configuration form with current data."""
         # Pre-populate fields from selected plant if available
         defaults = self._get_form_defaults()
@@ -1371,13 +1371,13 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
 
     async def async_step_reconfigure(
         self, _user_input: dict | None = None
-    ) -> FlowResult:
+    ) -> Any:
         """Handle reconfiguration of a plant subentry."""
         return await self.async_step_configure_plant_options()
 
     async def async_step_configure_plant_options(
         self, user_input: dict | None = None
-    ) -> FlowResult:
+    ) -> Any:
         """Configure plant min/max values through subentry options."""
         if self.source not in ("reconfigure", "user"):
             return self.async_abort(reason="invalid_source")
@@ -1418,7 +1418,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
         user_input: dict,
         current_data: dict,
         subentry: config_entries.ConfigSubentry,
-    ) -> FlowResult:
+    ) -> Any:
         """Handle user input for configure plant options."""
         # Extract values from sections
         section_data = self._extract_section_data(user_input)
