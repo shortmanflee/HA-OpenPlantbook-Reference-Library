@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
-
-from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.openplantbook_ref.const import DOMAIN
 from custom_components.openplantbook_ref.sensor import (
@@ -14,6 +12,10 @@ from custom_components.openplantbook_ref.sensor import (
     _create_device_entities,
     async_setup_entry,
 )
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 
 class TestPlantConfig:
@@ -320,7 +322,7 @@ class TestAsyncSetupEntry:
 
             await async_setup_entry(hass, mock_config_entry, mock_async_add_entities)
 
-            # device_id is stripped from device_info when passed to _create_device_entities
+            # device_id is stripped when passed to _create_device_entities
             expected_device_info = {"name": "Test Plant", "plant_id": "test_plant_123"}
             mock_create_entities.assert_called_once_with(
                 expected_device_info, "test_device"

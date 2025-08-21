@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
-import pytest
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.openplantbook_ref import (
     async_remove_config_entry_device,
@@ -18,6 +16,11 @@ from custom_components.openplantbook_ref import (
     async_update_entry,
 )
 from custom_components.openplantbook_ref.const import DOMAIN
+
+if TYPE_CHECKING:
+    import pytest
+    from homeassistant.core import HomeAssistant
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 
 class TestInit:

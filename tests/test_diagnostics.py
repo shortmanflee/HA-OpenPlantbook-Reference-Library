@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from typing import TYPE_CHECKING
 
 from custom_components.openplantbook_ref.const import DOMAIN
 from custom_components.openplantbook_ref.diagnostics import (
     async_get_config_entry_diagnostics,
 )
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 
 class TestDiagnostics:
