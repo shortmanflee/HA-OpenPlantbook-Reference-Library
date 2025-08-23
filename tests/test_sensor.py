@@ -15,6 +15,19 @@ from custom_components.openplantbook_ref.sensor import (
     async_setup_entry,
 )
 
+# Test constants for plant sensor values
+TEST_MIN_LIGHT = 1000
+TEST_MAX_LIGHT = 3000
+TEST_MIN_TEMP = 18
+TEST_MAX_TEMP = 25
+TEST_MIN_HUMIDITY = 40
+TEST_MAX_HUMIDITY = 60
+TEST_MIN_MOISTURE = 30
+TEST_MAX_MOISTURE = 70
+TEST_MIN_SOIL_EC = 350
+TEST_MAX_SOIL_EC = 2000
+EXPECTED_SUBENTRY_COUNT = 2
+
 
 class TestPlantConfig:
     """Test the PlantConfig dataclass."""
@@ -30,16 +43,16 @@ class TestPlantConfig:
             common_name="Test Plant Common",
             categories=["Indoor", "Easy Care"],
             friendly_name="My Test Plant",
-            min_light=1000,
-            max_light=3000,
-            min_temp=18,
-            max_temp=25,
-            min_humidity=40,
-            max_humidity=60,
-            min_moisture=30,
-            max_moisture=70,
-            min_soil_ec=350,
-            max_soil_ec=2000,
+            min_light=TEST_MIN_LIGHT,
+            max_light=TEST_MAX_LIGHT,
+            min_temp=TEST_MIN_TEMP,
+            max_temp=TEST_MAX_TEMP,
+            min_humidity=TEST_MIN_HUMIDITY,
+            max_humidity=TEST_MAX_HUMIDITY,
+            min_moisture=TEST_MIN_MOISTURE,
+            max_moisture=TEST_MAX_MOISTURE,
+            min_soil_ec=TEST_MIN_SOIL_EC,
+            max_soil_ec=TEST_MAX_SOIL_EC,
         )
 
         assert config.name == "Test Plant"
@@ -50,16 +63,16 @@ class TestPlantConfig:
         assert config.common_name == "Test Plant Common"
         assert config.categories == ["Indoor", "Easy Care"]
         assert config.friendly_name == "My Test Plant"
-        assert config.min_light == 1000
-        assert config.max_light == 3000
-        assert config.min_temp == 18
-        assert config.max_temp == 25
-        assert config.min_humidity == 40
-        assert config.max_humidity == 60
-        assert config.min_moisture == 30
-        assert config.max_moisture == 70
-        assert config.min_soil_ec == 350
-        assert config.max_soil_ec == 2000
+        assert config.min_light == TEST_MIN_LIGHT
+        assert config.max_light == TEST_MAX_LIGHT
+        assert config.min_temp == TEST_MIN_TEMP
+        assert config.max_temp == TEST_MAX_TEMP
+        assert config.min_humidity == TEST_MIN_HUMIDITY
+        assert config.max_humidity == TEST_MAX_HUMIDITY
+        assert config.min_moisture == TEST_MIN_MOISTURE
+        assert config.max_moisture == TEST_MAX_MOISTURE
+        assert config.min_soil_ec == TEST_MIN_SOIL_EC
+        assert config.max_soil_ec == TEST_MAX_SOIL_EC
 
     def test_plant_config_defaults(self) -> None:
         """Test PlantConfig with default values."""
@@ -200,16 +213,16 @@ class TestPlantSensor:
             common_name="Test Plant Common",
             categories=["Indoor", "Easy Care"],
             friendly_name="My Test Plant",
-            min_light=1000,
-            max_light=3000,
-            min_temp=18,
-            max_temp=25,
-            min_humidity=40,
-            max_humidity=60,
-            min_moisture=30,
-            max_moisture=70,
-            min_soil_ec=350,
-            max_soil_ec=2000,
+            min_light=TEST_MIN_LIGHT,
+            max_light=TEST_MAX_LIGHT,
+            min_temp=TEST_MIN_TEMP,
+            max_temp=TEST_MAX_TEMP,
+            min_humidity=TEST_MIN_HUMIDITY,
+            max_humidity=TEST_MAX_HUMIDITY,
+            min_moisture=TEST_MIN_MOISTURE,
+            max_moisture=TEST_MAX_MOISTURE,
+            min_soil_ec=TEST_MIN_SOIL_EC,
+            max_soil_ec=TEST_MAX_SOIL_EC,
         )
 
         sensor = PlantSensor(config)
@@ -220,16 +233,16 @@ class TestPlantSensor:
         assert attributes["common_name"] == "Test Plant Common"
         assert attributes["categories"] == ["Indoor", "Easy Care"]
         # friendly_name is not in attributes, it's used for native_value
-        assert attributes["minimum_light"] == 1000
-        assert attributes["maximum_light"] == 3000
-        assert attributes["minimum_temperature"] == 18
-        assert attributes["maximum_temperature"] == 25
-        assert attributes["minimum_humidity"] == 40
-        assert attributes["maximum_humidity"] == 60
-        assert attributes["minimum_moisture"] == 30
-        assert attributes["maximum_moisture"] == 70
-        assert attributes["minimum_soil_ec"] == 350
-        assert attributes["maximum_soil_ec"] == 2000
+        assert attributes["minimum_light"] == TEST_MIN_LIGHT
+        assert attributes["maximum_light"] == TEST_MAX_LIGHT
+        assert attributes["minimum_temperature"] == TEST_MIN_TEMP
+        assert attributes["maximum_temperature"] == TEST_MAX_TEMP
+        assert attributes["minimum_humidity"] == TEST_MIN_HUMIDITY
+        assert attributes["maximum_humidity"] == TEST_MAX_HUMIDITY
+        assert attributes["minimum_moisture"] == TEST_MIN_MOISTURE
+        assert attributes["maximum_moisture"] == TEST_MAX_MOISTURE
+        assert attributes["minimum_soil_ec"] == TEST_MIN_SOIL_EC
+        assert attributes["maximum_soil_ec"] == TEST_MAX_SOIL_EC
 
     def test_plant_sensor_extra_state_attributes_none_values(self) -> None:
         """Test PlantSensor extra state attributes with None values."""
@@ -320,7 +333,8 @@ class TestAsyncSetupEntry:
 
             await async_setup_entry(hass, mock_config_entry, mock_async_add_entities)
 
-            # device_id is stripped from device_info when passed to _create_device_entities
+            # device_id is stripped from device_info when passed to
+            # _create_device_entities
             expected_device_info = {"name": "Test Plant", "plant_id": "test_plant_123"}
             mock_create_entities.assert_called_once_with(
                 expected_device_info, "test_device"
@@ -375,6 +389,6 @@ class TestAsyncSetupEntry:
             await async_setup_entry(hass, mock_config_entry, mock_async_add_entities)
 
             # Should be called twice, once for each subentry
-            assert mock_create_entities.call_count == 2
+            assert mock_create_entities.call_count == EXPECTED_SUBENTRY_COUNT
             # Should add entities separately for each subentry (not all at once)
-            assert mock_async_add_entities.call_count == 2
+            assert mock_async_add_entities.call_count == EXPECTED_SUBENTRY_COUNT

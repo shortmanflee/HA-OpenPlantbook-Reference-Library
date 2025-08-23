@@ -95,7 +95,7 @@ class TestPlantSensorConfigFlow:
     def test_flow_has_domain(self) -> None:
         """Test that flow has correct domain."""
         # The domain is set via the class parameter in the class definition
-        flow = PlantSensorConfigFlow()
+        _flow = PlantSensorConfigFlow()
         # Since domain is defined as a class parameter, it should be accessible
         # The ConfigFlow base class should set this up properly
         assert DOMAIN == "openplantbook_ref"  # Just verify our constant is correct

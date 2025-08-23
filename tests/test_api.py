@@ -24,18 +24,21 @@ class TestAsyncConfigEntryAuth:
         """Test successful API client creation."""
         auth = AsyncConfigEntryAuth("test_client_id", "test_secret")
 
-        with patch(
-            "custom_components.openplantbook_ref.api.OPENPLANTBOOK_AVAILABLE", True
+        with (
+            patch(
+                "custom_components.openplantbook_ref.api.OPENPLANTBOOK_AVAILABLE",
+                new=True,
+            ),
+            patch("openplantbook_sdk.OpenPlantBookApi") as mock_api_class,
         ):
-            with patch("openplantbook_sdk.OpenPlantBookApi") as mock_api_class:
-                mock_api_instance = Mock()
-                mock_api_class.return_value = mock_api_instance
+            mock_api_instance = Mock()
+            mock_api_class.return_value = mock_api_instance
 
-                result = await auth.get_api_client()
+            result = await auth.get_api_client()
 
-                assert result is mock_api_instance
-                assert auth._api is mock_api_instance
-                mock_api_class.assert_called_once_with("test_client_id", "test_secret")
+            assert result is mock_api_instance
+            assert auth._api is mock_api_instance
+            mock_api_class.assert_called_once_with("test_client_id", "test_secret")
 
     async def test_get_api_client_reuse_existing(self) -> None:
         """Test reusing existing API client."""
@@ -51,26 +54,32 @@ class TestAsyncConfigEntryAuth:
         """Test API client creation when SDK is not available."""
         auth = AsyncConfigEntryAuth("test_client_id", "test_secret")
 
-        with patch(
-            "custom_components.openplantbook_ref.api.OPENPLANTBOOK_AVAILABLE", False
-        ):
-            with pytest.raises(
+        with (
+            patch(
+                "custom_components.openplantbook_ref.api.OPENPLANTBOOK_AVAILABLE",
+                new=False,
+            ),
+            pytest.raises(
                 ConfigEntryAuthFailed, match="OpenPlantBook SDK not available"
-            ):
-                await auth.get_api_client()
+            ),
+        ):
+            await auth.get_api_client()
 
     async def test_get_api_client_creation_error(self) -> None:
         """Test API client creation error handling."""
         auth = AsyncConfigEntryAuth("test_client_id", "test_secret")
 
-        with patch(
-            "custom_components.openplantbook_ref.api.OPENPLANTBOOK_AVAILABLE", True
+        with (
+            patch(
+                "custom_components.openplantbook_ref.api.OPENPLANTBOOK_AVAILABLE",
+                new=True,
+            ),
+            patch("openplantbook_sdk.OpenPlantBookApi") as mock_api_class,
         ):
-            with patch("openplantbook_sdk.OpenPlantBookApi") as mock_api_class:
-                mock_api_class.side_effect = Exception("Creation failed")
+            mock_api_class.side_effect = Exception("Creation failed")
 
-                with pytest.raises(Exception, match="Creation failed"):
-                    await auth.get_api_client()
+            with pytest.raises(Exception, match="Creation failed"):
+                await auth.get_api_client()
 
     async def test_async_plant_search_success(
         self, caplog: pytest.LogCaptureFixture

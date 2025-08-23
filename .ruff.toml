@@ -23,3 +23,11 @@ keep-runtime-typing = true
 
 [lint.mccabe]
 max-complexity = 25
+
+[lint.per-file-ignores]
+"tests/**" = [
+    "S101",  # Use of `assert` detected - normal in tests
+    "S105",  # Possible hardcoded password - test fixtures use fake values
+    "SLF001", # Private member accessed - tests need to access private members
+    "TC002", # Move third-party import into TYPE_CHECKING block - tests need runtime imports
+]
