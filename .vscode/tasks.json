@@ -45,7 +45,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "mkdir -p ${workspaceFolder}/config && ln -sf ${workspaceFolder}/custom_components ${workspaceFolder}/config/custom_components"
+                "mkdir -p ${workspaceFolder}/config && cd ${workspaceFolder} && rm -f config/custom_components && ln -sf $(pwd)/custom_components config/custom_components"
             ],
             "group": "build",
             "presentation": {

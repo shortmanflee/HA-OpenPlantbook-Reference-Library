@@ -1,7 +1,7 @@
 {
     "name": "shortmanflee/openplantbook_ref",
     "image": "mcr.microsoft.com/devcontainers/python:3.13",
-    "postCreateCommand": "pip install -r requirements.txt && mkdir -p config && ln -sf ${PWD}/custom_components ${PWD}/config/custom_components",
+    "postCreateCommand": "pip install -r requirements.txt && bash -c 'mkdir -p config && cd ${PWD} && rm -f config/custom_components && ln -sf $(pwd)/custom_components config/custom_components'",
     "forwardPorts": [
         8080
     ],
