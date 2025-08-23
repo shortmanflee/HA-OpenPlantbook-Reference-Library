@@ -1,14 +1,26 @@
-#!/usr/bin/env bash
-
 set -e
+
 
 cd "$(dirname "$0")/.."
 
-python3 -m pip install --requirement requirements.txt
+# Create .venv if not present
+# Create .venv if not present
+if [[ ! -d ".venv" ]]; then
+    python3 -m venv .venv
+fi
+
+# Install requirements if not already installed
+if [[ ! -f ".venv/.requirements_installed" ]]; then
+    ./.venv/bin/pip install -r requirements.txt && touch .venv/.requirements_installed
+fi
+
+# Create config dir if not present
+if [ ! -d "${PWD}/config" ]; then
+    mkdir -p "${PWD}/config"
+    hass --config "${PWD}/config" --script ensure_config
+fi
 
 # Create symlink to custom_components in config directory if it doesn't exist
-mkdir -p "${PWD}/config"
-if [[ ! -L "${PWD}/config/custom_components" ]]; then
+if [ ! -L "${PWD}/config/custom_components" ]; then
     ln -sf "${PWD}/custom_components" "${PWD}/config/custom_components"
-    echo "Created symlink: config/custom_components -> custom_components"
 fi

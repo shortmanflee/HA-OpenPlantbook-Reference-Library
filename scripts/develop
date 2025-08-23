@@ -2,7 +2,19 @@
 
 set -e
 
+
 cd "$(dirname "$0")/.."
+
+# Create .venv if not present
+# Create .venv if not present
+if [[ ! -d ".venv" ]]; then
+    python3 -m venv .venv
+fi
+
+# Install requirements if not already installed
+if [[ ! -f ".venv/.requirements_installed" ]]; then
+    ./.venv/bin/pip install -r requirements.txt && touch .venv/.requirements_installed
+fi
 
 # Create config dir if not present
 if [[ ! -d "${PWD}/config" ]]; then
