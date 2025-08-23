@@ -5,3 +5,10 @@ set -e
 cd "$(dirname "$0")/.."
 
 python3 -m pip install --requirement requirements.txt
+
+# Create symlink to custom_components in config directory if it doesn't exist
+mkdir -p "${PWD}/config"
+if [[ ! -L "${PWD}/config/custom_components" ]]; then
+    ln -sf "${PWD}/custom_components" "${PWD}/config/custom_components"
+    echo "Created symlink: config/custom_components -> custom_components"
+fi

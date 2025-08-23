@@ -10,3 +10,10 @@ logger:
   default: info
   logs:
     custom_components.openplantbook_ref: debug
+
+
+http:
+  server_port: 8080
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - ::1
