@@ -15,12 +15,16 @@
         "vscode": {
             "extensions": [
                 "charliermarsh.ruff",
-                "github.vscode-pull-request-github",
-                "ms-python.python",
-                "ms-python.vscode-pylance",
                 "ryanluker.vscode-coverage-gutters",
                 "redhat.vscode-yaml",
-                "ms-vscode.vscode-json"
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-vscode.vscode-json",
+                "GitHub.vscode-github-actions",
+                "GitHub.copilot",
+                "GitHub.copilot-chat",
+                "GitHub.remotehub",
+                "GitHub.vscode-pull-request-github"
             ],
             "settings": {
                 "files.eol": "\n",
