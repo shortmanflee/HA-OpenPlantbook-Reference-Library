@@ -8,8 +8,12 @@ import logging
 import re
 import urllib.parse
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import SOURCE_REAUTH
@@ -155,7 +159,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "API credentials validation failed - invalid authentication"
             )
             errors["base"] = "invalid_auth"
-        except (ConnectionError, TimeoutError):
+        except (aiohttp.ClientError, TimeoutError, ConnectionError):
             _LOGGER.exception("API credentials validation failed - connection error")
             errors["base"] = "cannot_connect"
         except ImportError:
@@ -246,6 +250,15 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={},
         )
 
+    def _get_image_config_schema(self) -> vol.Schema:
+        """Get the image configuration schema."""
+        return vol.Schema(
+            {
+                vol.Optional("download_images", default=False): bool,
+                vol.Optional("download_path", default="www/images/plants/"): str,
+            }
+        )
+
     async def async_step_image_config(self, user_input: dict | None = None) -> Any:
         """Configure image download options."""
         errors = {}
@@ -279,13 +292,8 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data=config_data,
                 )
 
-        # Create schema for image configuration
-        image_config_schema = vol.Schema(
-            {
-                vol.Optional("download_images", default=False): bool,
-                vol.Optional("download_path", default="www/images/plants/"): str,
-            }
-        )
+        # Create schema for image configuration using the extracted method
+        image_config_schema = self._get_image_config_schema()
 
         return self.async_show_form(
             step_id="image_config",
@@ -1671,6 +1679,51 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
             "max_soil_ec": section_data["soil_ec_section"].get("max_soil_ec"),
         }
 
+    def _get_light_defaults(
+        self, get_default_value: Callable[..., Any]
+    ) -> dict[str, Any]:
+        """Get default values for light section."""
+        return {
+            "min_light": get_default_value("min_light", "min_light_lux"),
+            "max_light": get_default_value("max_light", "max_light_lux"),
+        }
+
+    def _get_temperature_defaults(
+        self, get_default_value: Callable[..., Any]
+    ) -> dict[str, Any]:
+        """Get default values for temperature section."""
+        return {
+            "min_temp": get_default_value("min_temp", "min_temp"),
+            "max_temp": get_default_value("max_temp", "max_temp"),
+        }
+
+    def _get_humidity_defaults(
+        self, get_default_value: Callable[..., Any]
+    ) -> dict[str, Any]:
+        """Get default values for humidity section."""
+        return {
+            "min_humidity": get_default_value("min_humidity", "min_env_humid"),
+            "max_humidity": get_default_value("max_humidity", "max_env_humid"),
+        }
+
+    def _get_moisture_defaults(
+        self, get_default_value: Callable[..., Any]
+    ) -> dict[str, Any]:
+        """Get default values for moisture section."""
+        return {
+            "min_moisture": get_default_value("min_moisture", "min_soil_moist"),
+            "max_moisture": get_default_value("max_moisture", "max_soil_moist"),
+        }
+
+    def _get_soil_ec_defaults(
+        self, get_default_value: Callable[..., Any]
+    ) -> dict[str, Any]:
+        """Get default values for soil EC section."""
+        return {
+            "min_soil_ec": get_default_value("min_soil_ec", "min_soil_ec"),
+            "max_soil_ec": get_default_value("max_soil_ec", "max_soil_ec"),
+        }
+
     def _create_configure_plant_options_schema(self, current_data: dict) -> vol.Schema:
         """Create schema for configure plant options form."""
         current_categories = self._prepare_current_categories(current_data)
@@ -1704,46 +1757,23 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
                 vol.Optional("categories_section"): categories_section,
                 vol.Optional(
                     "light_values_section",
-                    default={
-                        "min_light": get_default_value("min_light", "min_light_lux"),
-                        "max_light": get_default_value("max_light", "max_light_lux"),
-                    },
+                    default=self._get_light_defaults(get_default_value),
                 ): light_section,
                 vol.Optional(
                     "temperature_values_section",
-                    default={
-                        "min_temp": get_default_value("min_temp", "min_temp"),
-                        "max_temp": get_default_value("max_temp", "max_temp"),
-                    },
+                    default=self._get_temperature_defaults(get_default_value),
                 ): temperature_section,
                 vol.Optional(
                     "humidity_values_section",
-                    default={
-                        "min_humidity": get_default_value(
-                            "min_humidity", "min_env_humid"
-                        ),
-                        "max_humidity": get_default_value(
-                            "max_humidity", "max_env_humid"
-                        ),
-                    },
+                    default=self._get_humidity_defaults(get_default_value),
                 ): humidity_section,
                 vol.Optional(
                     "moisture_values_section",
-                    default={
-                        "min_moisture": get_default_value(
-                            "min_moisture", "min_soil_moist"
-                        ),
-                        "max_moisture": get_default_value(
-                            "max_moisture", "max_soil_moist"
-                        ),
-                    },
+                    default=self._get_moisture_defaults(get_default_value),
                 ): moisture_section,
                 vol.Optional(
                     "soil_ec_values_section",
-                    default={
-                        "min_soil_ec": get_default_value("min_soil_ec", "min_soil_ec"),
-                        "max_soil_ec": get_default_value("max_soil_ec", "max_soil_ec"),
-                    },
+                    default=self._get_soil_ec_defaults(get_default_value),
                 ): soil_ec_section,
             }
         )
@@ -1806,7 +1836,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
 
     def _get_light_section_schema(
         self,
-        get_default_value: callable,  # type: ignore[type-arg]
+        get_default_value: Callable[..., Any],
     ) -> section:
         """Get the light values section schema."""
         return section(
@@ -1839,7 +1869,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
 
     def _get_temperature_section_schema(
         self,
-        get_default_value: callable,  # type: ignore[type-arg]
+        get_default_value: Callable[..., Any],
     ) -> section:
         """Get the temperature values section schema."""
         return section(
@@ -1870,7 +1900,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
 
     def _get_humidity_section_schema(
         self,
-        get_default_value: callable,  # type: ignore[type-arg]
+        get_default_value: Callable[..., Any],
     ) -> section:
         """Get the humidity values section schema."""
         return section(
@@ -1907,7 +1937,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
 
     def _get_moisture_section_schema(
         self,
-        get_default_value: callable,  # type: ignore[type-arg]
+        get_default_value: Callable[..., Any],
     ) -> section:
         """Get the moisture values section schema."""
         return section(
@@ -1944,7 +1974,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
 
     def _get_soil_ec_section_schema(
         self,
-        get_default_value: callable,  # type: ignore[type-arg]
+        get_default_value: Callable[..., Any],
     ) -> section:
         """Get the soil EC values section schema."""
         return section(
