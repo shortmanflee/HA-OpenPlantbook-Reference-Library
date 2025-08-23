@@ -1,15 +1,15 @@
 """Test openplantbook_ref config flow."""
 
-import pytest
 from unittest.mock import patch
 
+import pytest
 from homeassistant import data_entry_flow
 from homeassistant.core import HomeAssistant
 
 from custom_components.openplantbook_ref.config_flow import (
     PlantSensorConfigFlow,
-    _to_proper_case,
     _get_existing_categories,
+    _to_proper_case,
 )
 from custom_components.openplantbook_ref.const import DOMAIN
 
@@ -32,22 +32,16 @@ class TestConfigFlowHelpers:
         result = _to_proper_case("   ")
         assert result == "   "
 
-    @pytest.mark.asyncio
-    async def test_get_existing_categories_no_entries(
-        self, hass: HomeAssistant
-    ) -> None:
+    def test_get_existing_categories_no_entries(self, hass: HomeAssistant) -> None:
         """Test _get_existing_categories with no config entries."""
-        result = await _get_existing_categories(hass)
+        result = _get_existing_categories(hass)
         assert isinstance(result, list)
         assert len(result) == 0
 
-    @pytest.mark.asyncio
-    async def test_get_existing_categories_with_entries(
-        self, hass: HomeAssistant
-    ) -> None:
+    def test_get_existing_categories_with_entries(self, hass: HomeAssistant) -> None:
         """Test _get_existing_categories with existing entries."""
         # This would need proper mock config entries to test fully
-        result = await _get_existing_categories(hass)
+        result = _get_existing_categories(hass)
         assert isinstance(result, list)
 
 

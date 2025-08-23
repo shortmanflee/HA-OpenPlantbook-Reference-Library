@@ -2,9 +2,14 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Setup Development Environment",
+            "label": "Install Dependencies",
             "type": "shell",
-            "command": "./scripts/setup",
+            "command": "pip",
+            "args": [
+                "install",
+                "-r",
+                "requirements.txt"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -17,7 +22,12 @@
         {
             "label": "Start Home Assistant (Development)",
             "type": "shell",
-            "command": "./scripts/develop",
+            "command": "hass",
+            "args": [
+                "--config",
+                "${workspaceFolder}/config",
+                "--debug"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -26,12 +36,28 @@
                 "panel": "shared"
             },
             "problemMatcher": [],
-            "isBackground": true
+            "isBackground": true,
+            "dependsOn": "Setup Config Directory"
+        },
+        {
+            "label": "Setup Config Directory",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "mkdir -p ${workspaceFolder}/config && ln -sf ${workspaceFolder}/custom_components ${workspaceFolder}/config/custom_components"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": false,
+                "reveal": "silent"
+            },
+            "problemMatcher": []
         },
         {
             "label": "Run Tests",
             "type": "shell",
-            "command": "./.venv/bin/python",
+            "command": "python",
             "args": [
                 "-m",
                 "pytest",
@@ -48,17 +74,14 @@
             "problemMatcher": []
         },
         {
-            "label": "Lint Code",
+            "label": "Lint and Fix with Ruff",
             "type": "shell",
-            "command": "./scripts/lint",
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared"
-            },
-            "problemMatcher": []
+            "command": "bash",
+            "args": [
+                "-c",
+                "ruff format . && ruff check . --fix"
+            ],
+            "group": "build"
         }
     ]
 }

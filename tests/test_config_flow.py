@@ -1,15 +1,15 @@
 """Test openplantbook_ref config flow."""
 
-import pytest
 from unittest.mock import patch
 
+import pytest
 from homeassistant import data_entry_flow
 from homeassistant.core import HomeAssistant
 
 from custom_components.openplantbook_ref.config_flow import (
     PlantSensorConfigFlow,
-    _to_proper_case,
     _get_existing_categories,
+    _to_proper_case,
 )
 from custom_components.openplantbook_ref.const import DOMAIN
 

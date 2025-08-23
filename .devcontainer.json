@@ -1,7 +1,7 @@
 {
     "name": "shortmanflee/openplantbook_ref",
     "image": "mcr.microsoft.com/devcontainers/python:3.13",
-    "postCreateCommand": "scripts/setup",
+    "postCreateCommand": "pip install -r requirements.txt && mkdir -p config && ln -sf ${PWD}/custom_components ${PWD}/config/custom_components",
     "forwardPorts": [
         8080
     ],
@@ -18,7 +18,9 @@
                 "github.vscode-pull-request-github",
                 "ms-python.python",
                 "ms-python.vscode-pylance",
-                "ryanluker.vscode-coverage-gutters"
+                "ryanluker.vscode-coverage-gutters",
+                "redhat.vscode-yaml",
+                "ms-vscode.vscode-json"
             ],
             "settings": {
                 "files.eol": "\n",
@@ -32,6 +34,12 @@
                 "python.defaultInterpreterPath": "/usr/local/bin/python",
                 "[python]": {
                     "editor.defaultFormatter": "charliermarsh.ruff"
+                },
+                "[yaml]": {
+                    "editor.defaultFormatter": "redhat.vscode-yaml"
+                },
+                "[json]": {
+                    "editor.defaultFormatter": "vscode.json-language-features"
                 }
             }
         }
@@ -39,7 +47,10 @@
     "remoteUser": "vscode",
     "features": {
         "ghcr.io/devcontainers-extra/features/apt-packages:1": {
-            "packages": "ffmpeg,libturbojpeg0,libpcap-dev"
+            "packages": "ffmpeg,libturbojpeg0,libpcap-dev,sqlite3"
+        },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts"
         }
     }
 }
