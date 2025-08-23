@@ -55,8 +55,8 @@ def _create_device_entities(device_info: dict, device_id: str) -> list[PlantSens
     categories = device_info.get("categories")
     friendly_name = device_info.get("friendly_name")
 
-    min_light = device_info.get("min_light", 0)
-    max_light = device_info.get("max_light", 100)
+    min_light = device_info.get("min_light")
+    max_light = device_info.get("max_light")
     min_temp = device_info.get("min_temp")
     max_temp = device_info.get("max_temp")
     min_humidity = device_info.get("min_humidity")

@@ -103,6 +103,89 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize the PlantSensorConfigFlow."""
         self._data: dict | None = None
 
+    def _get_api_credentials_schema(self) -> vol.Schema:
+        """Get the API credentials schema, handling reauth flow."""
+        api_credentials_schema = vol.Schema(
+            {
+                vol.Required("client_id"): str,
+                vol.Required("secret"): str,
+            }
+        )
+
+        # Pre-populate with existing data if in reauth flow
+        if self.source == SOURCE_REAUTH:
+            _LOGGER.info("Reauth flow detected in main config flow")
+            entry = self._get_reauth_entry()
+            default_client_id = entry.data.get("client_id", "")
+            _LOGGER.debug("Using existing client_id for reauth: %s", default_client_id)
+            api_credentials_schema = vol.Schema(
+                {
+                    vol.Required("client_id", default=default_client_id): str,
+                    vol.Required("secret"): str,
+                }
+            )
+
+        return api_credentials_schema
+
+    def _validate_credentials(self, client_id: str, secret: str) -> dict[str, str]:
+        """Validate that credentials are provided."""
+        errors = {}
+
+        if not client_id:
+            _LOGGER.warning("Client ID is required but not provided")
+            errors["base"] = "client_id_required"
+        if not secret:
+            _LOGGER.warning("Secret is required but not provided")
+            errors["base"] = "secret_required"
+
+        return errors
+
+    async def _test_api_connection(self, client_id: str, secret: str) -> dict[str, str]:
+        """Test the API connection with provided credentials."""
+        errors = {}
+        _LOGGER.info("Testing API connection with provided credentials")
+
+        try:
+            auth = AsyncConfigEntryAuth(client_id, secret)
+            # Try to get the API client to validate credentials are working
+            await auth.get_api_client()
+            _LOGGER.info("API credentials validated successfully")
+        except ConfigEntryAuthFailed:
+            _LOGGER.exception(
+                "API credentials validation failed - invalid authentication"
+            )
+            errors["base"] = "invalid_auth"
+        except (ConnectionError, TimeoutError):
+            _LOGGER.exception("API credentials validation failed - connection error")
+            errors["base"] = "cannot_connect"
+        except ImportError:
+            _LOGGER.exception("API credentials validation failed - SDK not available")
+            errors["base"] = "cannot_connect"
+        except ValueError:
+            _LOGGER.exception("API credentials validation failed - invalid data")
+            errors["base"] = "invalid_auth"
+
+        return errors
+
+    async def _handle_reauth_flow(self, client_id: str, secret: str) -> Any:
+        """Handle the reauth flow for updating existing credentials."""
+        _LOGGER.info("Updating existing entry with new credentials")
+        entry = self._get_reauth_entry()
+        # Ensure we're updating the same entry by using its existing unique_id
+        await self.async_set_unique_id(entry.unique_id)
+        self._abort_if_unique_id_mismatch()
+        # Update the existing entry with new credentials
+        updated_data = {
+            **entry.data,
+            "client_id": client_id,
+            "secret": secret,
+        }
+        _LOGGER.info("Reauth completed successfully for entry %s", entry.entry_id)
+        return self.async_update_reload_and_abort(
+            entry,
+            data_updates=updated_data,
+        )
+
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> Any:
         """
         Show the setup form to the user and handle API credentials input.
@@ -116,26 +199,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             user_input is not None,
         )
         errors = {}
-        api_credentials_schema = vol.Schema(
-            {
-                vol.Required("client_id"): str,
-                vol.Required("secret"): str,
-            }
-        )
-
-        # Pre-populate with existing data if in reauth flow
-        default_client_id = ""
-        if self.source == SOURCE_REAUTH:
-            _LOGGER.info("Reauth flow detected in main config flow")
-            entry = self._get_reauth_entry()
-            default_client_id = entry.data.get("client_id", "")
-            _LOGGER.debug("Using existing client_id for reauth: %s", default_client_id)
-            api_credentials_schema = vol.Schema(
-                {
-                    vol.Required("client_id", default=default_client_id): str,
-                    vol.Required("secret"): str,
-                }
-            )
+        api_credentials_schema = self._get_api_credentials_schema()
 
         if user_input is not None:
             client_id = user_input.get("client_id", "").strip()
@@ -144,30 +208,12 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "Validating API credentials - client_id provided: %s", bool(client_id)
             )
 
-            if not client_id:
-                _LOGGER.warning("Client ID is required but not provided")
-                errors["base"] = "client_id_required"
-            if not secret:
-                _LOGGER.warning("Secret is required but not provided")
-                errors["base"] = "secret_required"
+            # Validate credentials are provided
+            errors = self._validate_credentials(client_id, secret)
+
             if not errors:
                 # Test connection before proceeding
-                _LOGGER.info("Testing API connection with provided credentials")
-                try:
-                    auth = AsyncConfigEntryAuth(client_id, secret)
-                    # Try to get the API client to validate credentials are working
-                    await auth.get_api_client()
-                    _LOGGER.info("API credentials validated successfully")
-                except ConfigEntryAuthFailed:
-                    _LOGGER.exception(
-                        "API credentials validation failed - invalid authentication"
-                    )
-                    errors["base"] = "invalid_auth"
-                except Exception:  # Config flows should be robust
-                    _LOGGER.exception(
-                        "API credentials validation failed - connection error"
-                    )
-                    errors["base"] = "cannot_connect"
+                errors = await self._test_api_connection(client_id, secret)
 
                 if errors:
                     _LOGGER.debug("Showing form again due to validation errors")
@@ -179,27 +225,7 @@ class PlantSensorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
 
                 if self.source == SOURCE_REAUTH:
-                    # For reauth, we keep the existing unique ID and just update
-                    # credentials
-                    _LOGGER.info("Updating existing entry with new credentials")
-                    entry = self._get_reauth_entry()
-                    # Ensure we're updating the same entry by using its existing
-                    # unique_id
-                    await self.async_set_unique_id(entry.unique_id)
-                    self._abort_if_unique_id_mismatch()
-                    # Update the existing entry with new credentials
-                    updated_data = {
-                        **entry.data,
-                        "client_id": client_id,
-                        "secret": secret,
-                    }
-                    _LOGGER.info(
-                        "Reauth completed successfully for entry %s", entry.entry_id
-                    )
-                    return self.async_update_reload_and_abort(
-                        entry,
-                        data_updates=updated_data,
-                    )
+                    return await self._handle_reauth_flow(client_id, secret)
 
                 # For initial setup, use client_id as unique ID for the config entry
                 _LOGGER.info("Setting up new integration entry")
@@ -1663,137 +1689,33 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
                 return plant_book_data.get(plantbook_key)
             return None
 
+        # Extract schema creation into separate methods for better readability
+        names_section = self._get_names_section_schema(current_data)
+        categories_section = self._get_categories_section_schema(current_categories)
+        light_section = self._get_light_section_schema(get_default_value)
+        temperature_section = self._get_temperature_section_schema(get_default_value)
+        humidity_section = self._get_humidity_section_schema(get_default_value)
+        moisture_section = self._get_moisture_section_schema(get_default_value)
+        soil_ec_section = self._get_soil_ec_section_schema(get_default_value)
+
         return vol.Schema(
             {
-                # Names section
-                vol.Optional("names_section"): section(
-                    vol.Schema(
-                        {
-                            vol.Required(
-                                "friendly_name",
-                                default=_to_proper_case(
-                                    current_data.get(
-                                        "friendly_name", current_data.get("name", "")
-                                    )
-                                ),
-                            ): selector.TextSelector(
-                                selector.TextSelectorConfig(
-                                    type=selector.TextSelectorType.TEXT
-                                )
-                            ),
-                            vol.Required(
-                                "scientific_name",
-                                default=_to_proper_case(
-                                    current_data.get("scientific_name", "")
-                                ),
-                            ): selector.TextSelector(
-                                selector.TextSelectorConfig(
-                                    type=selector.TextSelectorType.TEXT
-                                )
-                            ),
-                            vol.Required(
-                                "common_name",
-                                default=_to_proper_case(
-                                    current_data.get("common_name", "")
-                                ),
-                            ): selector.TextSelector(
-                                selector.TextSelectorConfig(
-                                    type=selector.TextSelectorType.TEXT
-                                )
-                            ),
-                        }
-                    ),
-                    SectionConfig({"collapsed": False}),
-                ),
-                # Categories section
-                vol.Optional("categories_section"): section(
-                    vol.Schema(
-                        {
-                            vol.Required(
-                                "categories", default=current_categories
-                            ): selector.SelectSelector(
-                                selector.SelectSelectorConfig(
-                                    options=_get_categories_options(
-                                        self.hass, current_categories
-                                    ),
-                                    multiple=True,
-                                    custom_value=True,
-                                    mode=selector.SelectSelectorMode.DROPDOWN,
-                                )
-                            ),
-                        }
-                    ),
-                    SectionConfig({"collapsed": False}),
-                ),
-                # Light values section
+                vol.Optional("names_section"): names_section,
+                vol.Optional("categories_section"): categories_section,
                 vol.Optional(
                     "light_values_section",
                     default={
                         "min_light": get_default_value("min_light", "min_light_lux"),
                         "max_light": get_default_value("max_light", "max_light_lux"),
                     },
-                ): section(
-                    vol.Schema(
-                        {
-                            vol.Required(
-                                "min_light",
-                                default=get_default_value("min_light", "min_light_lux"),
-                            ): selector.NumberSelector(
-                                selector.NumberSelectorConfig(
-                                    mode=selector.NumberSelectorMode.BOX,
-                                    min=0,
-                                    unit_of_measurement="lux",
-                                )
-                            ),
-                            vol.Required(
-                                "max_light",
-                                default=get_default_value("max_light", "max_light_lux"),
-                            ): selector.NumberSelector(
-                                selector.NumberSelectorConfig(
-                                    mode=selector.NumberSelectorMode.BOX,
-                                    min=0,
-                                    unit_of_measurement="lux",
-                                )
-                            ),
-                        }
-                    ),
-                    SectionConfig({"collapsed": True}),
-                ),
-                # Temperature values section
+                ): light_section,
                 vol.Optional(
                     "temperature_values_section",
                     default={
                         "min_temp": get_default_value("min_temp", "min_temp"),
                         "max_temp": get_default_value("max_temp", "max_temp"),
                     },
-                ): section(
-                    vol.Schema(
-                        {
-                            vol.Required(
-                                "min_temp",
-                                default=get_default_value("min_temp", "min_temp"),
-                            ): selector.NumberSelector(
-                                selector.NumberSelectorConfig(
-                                    mode=selector.NumberSelectorMode.BOX,
-                                    step=0.1,
-                                    unit_of_measurement="°C",
-                                )
-                            ),
-                            vol.Required(
-                                "max_temp",
-                                default=get_default_value("max_temp", "max_temp"),
-                            ): selector.NumberSelector(
-                                selector.NumberSelectorConfig(
-                                    mode=selector.NumberSelectorMode.BOX,
-                                    step=0.1,
-                                    unit_of_measurement="°C",
-                                )
-                            ),
-                        }
-                    ),
-                    SectionConfig({"collapsed": True}),
-                ),
-                # Humidity values section
+                ): temperature_section,
                 vol.Optional(
                     "humidity_values_section",
                     default={
@@ -1804,42 +1726,7 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
                             "max_humidity", "max_env_humid"
                         ),
                     },
-                ): section(
-                    vol.Schema(
-                        {
-                            vol.Required(
-                                "min_humidity",
-                                default=get_default_value(
-                                    "min_humidity", "min_env_humid"
-                                ),
-                            ): selector.NumberSelector(
-                                selector.NumberSelectorConfig(
-                                    mode=selector.NumberSelectorMode.BOX,
-                                    min=0,
-                                    max=100,
-                                    step=0.1,
-                                    unit_of_measurement="%",
-                                )
-                            ),
-                            vol.Required(
-                                "max_humidity",
-                                default=get_default_value(
-                                    "max_humidity", "max_env_humid"
-                                ),
-                            ): selector.NumberSelector(
-                                selector.NumberSelectorConfig(
-                                    mode=selector.NumberSelectorMode.BOX,
-                                    min=0,
-                                    max=100,
-                                    step=0.1,
-                                    unit_of_measurement="%",
-                                )
-                            ),
-                        }
-                    ),
-                    SectionConfig({"collapsed": True}),
-                ),
-                # Moisture values section
+                ): humidity_section,
                 vol.Optional(
                     "moisture_values_section",
                     default={
@@ -1850,78 +1737,244 @@ class PlantSubentryFlowHandler(config_entries.ConfigSubentryFlow):
                             "max_moisture", "max_soil_moist"
                         ),
                     },
-                ): section(
-                    vol.Schema(
-                        {
-                            vol.Required(
-                                "min_moisture",
-                                default=get_default_value(
-                                    "min_moisture", "min_soil_moist"
-                                ),
-                            ): selector.NumberSelector(
-                                selector.NumberSelectorConfig(
-                                    mode=selector.NumberSelectorMode.BOX,
-                                    min=0,
-                                    max=100,
-                                    step=0.1,
-                                    unit_of_measurement="%",
-                                )
-                            ),
-                            vol.Required(
-                                "max_moisture",
-                                default=get_default_value(
-                                    "max_moisture", "max_soil_moist"
-                                ),
-                            ): selector.NumberSelector(
-                                selector.NumberSelectorConfig(
-                                    mode=selector.NumberSelectorMode.BOX,
-                                    min=0,
-                                    max=100,
-                                    step=0.1,
-                                    unit_of_measurement="%",
-                                )
-                            ),
-                        }
-                    ),
-                    SectionConfig({"collapsed": True}),
-                ),
-                # Soil EC values section
+                ): moisture_section,
                 vol.Optional(
                     "soil_ec_values_section",
                     default={
                         "min_soil_ec": get_default_value("min_soil_ec", "min_soil_ec"),
                         "max_soil_ec": get_default_value("max_soil_ec", "max_soil_ec"),
                     },
-                ): section(
-                    vol.Schema(
-                        {
-                            vol.Required(
-                                "min_soil_ec",
-                                default=get_default_value("min_soil_ec", "min_soil_ec"),
-                            ): selector.NumberSelector(
-                                selector.NumberSelectorConfig(
-                                    mode=selector.NumberSelectorMode.BOX,
-                                    min=0,
-                                    step=0.01,
-                                    unit_of_measurement="mS/cm",
-                                )
-                            ),
-                            vol.Required(
-                                "max_soil_ec",
-                                default=get_default_value("max_soil_ec", "max_soil_ec"),
-                            ): selector.NumberSelector(
-                                selector.NumberSelectorConfig(
-                                    mode=selector.NumberSelectorMode.BOX,
-                                    min=0,
-                                    step=0.01,
-                                    unit_of_measurement="mS/cm",
-                                )
-                            ),
-                        }
-                    ),
-                    SectionConfig({"collapsed": True}),
-                ),
+                ): soil_ec_section,
             }
+        )
+
+    def _get_names_section_schema(self, current_data: dict) -> section:
+        """Get the names section schema."""
+        return section(
+            vol.Schema(
+                {
+                    vol.Required(
+                        "friendly_name",
+                        default=_to_proper_case(
+                            current_data.get(
+                                "friendly_name", current_data.get("name", "")
+                            )
+                        ),
+                    ): selector.TextSelector(
+                        selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+                    ),
+                    vol.Required(
+                        "scientific_name",
+                        default=_to_proper_case(
+                            current_data.get("scientific_name", "")
+                        ),
+                    ): selector.TextSelector(
+                        selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+                    ),
+                    vol.Required(
+                        "common_name",
+                        default=_to_proper_case(current_data.get("common_name", "")),
+                    ): selector.TextSelector(
+                        selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+                    ),
+                }
+            ),
+            SectionConfig({"collapsed": False}),
+        )
+
+    def _get_categories_section_schema(self, current_categories: list[str]) -> section:
+        """Get the categories section schema."""
+        return section(
+            vol.Schema(
+                {
+                    vol.Required(
+                        "categories", default=current_categories
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=_get_categories_options(
+                                self.hass, current_categories
+                            ),
+                            multiple=True,
+                            custom_value=True,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                }
+            ),
+            SectionConfig({"collapsed": False}),
+        )
+
+    def _get_light_section_schema(
+        self,
+        get_default_value: callable,  # type: ignore[type-arg]
+    ) -> section:
+        """Get the light values section schema."""
+        return section(
+            vol.Schema(
+                {
+                    vol.Required(
+                        "min_light",
+                        default=get_default_value("min_light", "min_light_lux"),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            mode=selector.NumberSelectorMode.BOX,
+                            min=0,
+                            unit_of_measurement="lux",
+                        )
+                    ),
+                    vol.Required(
+                        "max_light",
+                        default=get_default_value("max_light", "max_light_lux"),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            mode=selector.NumberSelectorMode.BOX,
+                            min=0,
+                            unit_of_measurement="lux",
+                        )
+                    ),
+                }
+            ),
+            SectionConfig({"collapsed": True}),
+        )
+
+    def _get_temperature_section_schema(
+        self,
+        get_default_value: callable,  # type: ignore[type-arg]
+    ) -> section:
+        """Get the temperature values section schema."""
+        return section(
+            vol.Schema(
+                {
+                    vol.Required(
+                        "min_temp", default=get_default_value("min_temp", "min_temp")
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            mode=selector.NumberSelectorMode.BOX,
+                            step=0.1,
+                            unit_of_measurement="°C",
+                        )
+                    ),
+                    vol.Required(
+                        "max_temp", default=get_default_value("max_temp", "max_temp")
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            mode=selector.NumberSelectorMode.BOX,
+                            step=0.1,
+                            unit_of_measurement="°C",
+                        )
+                    ),
+                }
+            ),
+            SectionConfig({"collapsed": True}),
+        )
+
+    def _get_humidity_section_schema(
+        self,
+        get_default_value: callable,  # type: ignore[type-arg]
+    ) -> section:
+        """Get the humidity values section schema."""
+        return section(
+            vol.Schema(
+                {
+                    vol.Required(
+                        "min_humidity",
+                        default=get_default_value("min_humidity", "min_env_humid"),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            mode=selector.NumberSelectorMode.BOX,
+                            min=0,
+                            max=100,
+                            step=0.1,
+                            unit_of_measurement="%",
+                        )
+                    ),
+                    vol.Required(
+                        "max_humidity",
+                        default=get_default_value("max_humidity", "max_env_humid"),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            mode=selector.NumberSelectorMode.BOX,
+                            min=0,
+                            max=100,
+                            step=0.1,
+                            unit_of_measurement="%",
+                        )
+                    ),
+                }
+            ),
+            SectionConfig({"collapsed": True}),
+        )
+
+    def _get_moisture_section_schema(
+        self,
+        get_default_value: callable,  # type: ignore[type-arg]
+    ) -> section:
+        """Get the moisture values section schema."""
+        return section(
+            vol.Schema(
+                {
+                    vol.Required(
+                        "min_moisture",
+                        default=get_default_value("min_moisture", "min_soil_moist"),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            mode=selector.NumberSelectorMode.BOX,
+                            min=0,
+                            max=100,
+                            step=0.1,
+                            unit_of_measurement="%",
+                        )
+                    ),
+                    vol.Required(
+                        "max_moisture",
+                        default=get_default_value("max_moisture", "max_soil_moist"),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            mode=selector.NumberSelectorMode.BOX,
+                            min=0,
+                            max=100,
+                            step=0.1,
+                            unit_of_measurement="%",
+                        )
+                    ),
+                }
+            ),
+            SectionConfig({"collapsed": True}),
+        )
+
+    def _get_soil_ec_section_schema(
+        self,
+        get_default_value: callable,  # type: ignore[type-arg]
+    ) -> section:
+        """Get the soil EC values section schema."""
+        return section(
+            vol.Schema(
+                {
+                    vol.Required(
+                        "min_soil_ec",
+                        default=get_default_value("min_soil_ec", "min_soil_ec"),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            mode=selector.NumberSelectorMode.BOX,
+                            min=0,
+                            step=0.01,
+                            unit_of_measurement="mS/cm",
+                        )
+                    ),
+                    vol.Required(
+                        "max_soil_ec",
+                        default=get_default_value("max_soil_ec", "max_soil_ec"),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            mode=selector.NumberSelectorMode.BOX,
+                            min=0,
+                            step=0.01,
+                            unit_of_measurement="mS/cm",
+                        )
+                    ),
+                }
+            ),
+            SectionConfig({"collapsed": True}),
         )
 
     def _prepare_current_categories(self, current_data: dict) -> list[str]:
