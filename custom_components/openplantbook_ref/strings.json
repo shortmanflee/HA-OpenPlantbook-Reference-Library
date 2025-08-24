@@ -1,0 +1,51 @@
+{
+  "config": {
+    "flow_title": "OpenPlantBook Reference Library",
+    "step": {
+      "user": {
+        "title": "Plant Sensor API Configuration",
+        "description": "Enter your OpenPlantBook API credentials.",
+        "data": {
+          "client_id": "Client ID",
+          "secret": "Secret"
+        },
+        "data_description": {
+          "client_id": "Your OpenPlantBook API client ID from your account settings.",
+          "secret": "Your OpenPlantBook API secret key for authentication."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Open PlantBook Reference Library",
+        "description": "The OpenPlantBook integration needs to re-authenticate your account"
+      },
+      "image_config": {
+        "title": "Image Download Configuration",
+        "description": "Configure whether to download plant images.",
+        "data": {
+          "download_images": "Download plant images",
+          "download_path": "Download path for images"
+        },
+        "data_description": {
+          "download_images": "Enable automatic downloading of plant images from OpenPlantBook.",
+          "download_path": "Local path where plant images will be stored (relative to Home Assistant config)."
+        }
+      }
+    },
+    "error": {
+      "client_id_required": "Client ID is required",
+      "secret_required": "Secret is required",
+      "invalid_auth": "Invalid authentication credentials",
+      "cannot_connect": "Failed to connect to OpenPlantBook API",
+      "invalid_path": "Invalid download path"
+    },
+    "abort": {
+      "already_configured": "This configuration already exists",
+      "missing_dependency": "Required dependency is missing",
+      "missing_api_credentials": "API credentials are missing",
+      "invalid_source": "Invalid configuration source",
+      "reauth_required": "Reauthentication required",
+      "reauth_successful": "Reauthentication successful",
+      "reconfigure_successful": "Plant configuration updated successfully"
+    }
+  }
+}

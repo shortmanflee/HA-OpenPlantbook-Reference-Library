@@ -1,0 +1,13 @@
+{
+  "domain": "openplantbook_ref",
+  "name": "Open Plantbook Reference Library",
+  "codeowners": ["@shortmanflee"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/shortmanflee/HA-OpenPlantbook-Reference-Library",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/shortmanflee/HA-OpenPlantbook-Reference-Library/issues",
+  "requirements": ["openplantbook-sdk"],
+  "version": "0.0.1"
+}

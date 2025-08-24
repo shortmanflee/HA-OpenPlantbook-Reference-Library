@@ -1,0 +1,354 @@
+{
+  "config": {
+    "flow_title": "Open Plantbook Reference Library",
+    "step": {
+      "user": {
+        "title": "Open Plantbook API Configuration",
+        "description": "Enter your Open Plantbook API OAuth2 client credentials",
+        "data": {
+          "client_id": "Client ID",
+          "secret": "Secret"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Open Plantbook Reference Library",
+        "description": "The Open Plantbook integration needs to re-authenticate your account"
+      },
+      "image_config": {
+        "title": "Image Download Configuration",
+        "description": "Configure whether to download plant images",
+        "data": {
+          "download_images": "Download plant images",
+          "download_path": "Download path for images"
+        },
+        "data_description": {
+          "download_path": "Local path where plant images will be stored (relative to Home Assistant config)"
+        }
+      }
+    },
+    "error": {
+      "client_id_required": "Client ID is required",
+      "secret_required": "Secret is required",
+      "invalid_auth": "Invalid authentication credentials",
+      "cannot_connect": "Failed to connect to Open Plantbook API",
+      "invalid_path": "Invalid download path"
+    },
+    "abort": {
+      "already_configured": "This configuration already exists",
+      "missing_dependency": "Required dependency is missing",
+      "missing_api_credentials": "API credentials are missing",
+      "invalid_source": "Invalid configuration source",
+      "reauth_required": "Reauthentication required",
+      "reauth_successful": "Reauthentication successful",
+      "reconfigure_successful": "Plant configuration updated successfully"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Open PlantBook API Options",
+        "description": "Configure image download settings",
+        "data": {
+          "download_images": "Download plant images",
+          "download_path": "Download path for images"
+        },
+        "data_description": {
+          "download_path": "Local path where plant images will be stored (relative to Home Assistant config)."
+        }
+      }
+    },
+    "error": {
+      "invalid_path": "Invalid download path"
+    },
+    "abort": {
+      "reauth_required": "Reauthentication required"
+    }
+  },
+  "config_subentries": {
+    "flow_title": {
+      "step": {
+        "user": {
+          "title": "Open Plantbook Reference Library"
+        }
+      },
+      "abort": {
+        "already_configured": "Configuration exists",
+        "reauth_required": "Reauthentication required",
+        "reconfigure_successful": "Plant updated"
+      }
+    },
+    "plant": {
+      "flow_title": "Add Plant - {name}",
+      "initiate_flow": {
+        "user": "Add plant"
+      },
+      "entry_type": "Plant Reference Entry",
+      "step": {
+        "user": {
+          "title": "Search for a new plant",
+          "description": "Enter the name of the plant to perform a search:",
+          "data": {
+            "plant_name": "Plant Name"
+          },
+          "data_description": {
+            "plant_name": "Hint: Entering scientific name of the plant from the plant passport may yield better results"
+          }
+        },
+        "select_plant": {
+          "title": "Select Plant",
+          "description": "Select a plant from the search results",
+          "data": {
+            "selected_plant": "Select Plant"
+          }
+        },
+        "no_results_found": {
+          "title": "Search for a new plant",
+          "description": "The search for {plant_name} on Open Plantbook yielded no results.",
+          "data": {
+            "action": "What would you like to do?"
+          }
+        },
+        "configure_plant": {
+          "title": "Configure Plant",
+          "description": "Configure the plant settings for {plant_name}.",
+          "data": {
+            "friendly_name": "Friendly Name",
+            "scientific_name": "Scientific Name",
+            "common_name": "Common Name",
+            "categories": "Categories",
+            "min_light": "Minimum Light Level",
+            "max_light": "Maximum Light Level",
+            "min_temp": "Minimum Temperature",
+            "max_temp": "Maximum Temperature",
+            "min_humidity": "Minimum Humidity",
+            "max_humidity": "Maximum Humidity",
+            "min_moisture": "Minimum Soil Moisture",
+            "max_moisture": "Maximum Soil Moisture",
+            "min_soil_ec": "Minimum Soil EC",
+            "max_soil_ec": "Maximum Soil EC"
+          },
+          "data_description": {
+            "friendly_name": "Display name for this plant in Home Assistant. This is what you'll see in the UI",
+            "scientific_name": "Latin/scientific name used for plant identification and care data lookup",
+            "common_name": "Common name or nickname for the plant (e.g., 'Snake Plant' for Sansevieria)",
+            "categories": "Plant family classifications, add as many as required"
+          },
+          "sections": {
+            "names_section": {
+              "name": "Names",
+              "description": "Configure how this plant will be identified in Home Assistant",
+              "data": {
+                "friendly_name": "Friendly Name",
+                "scientific_name": "Scientific Name",
+                "common_name": "Common Name"
+              },
+              "data_description": {
+                "friendly_name": "Display name for this plant in Home Assistant. This is what you'll see in the UI",
+                "scientific_name": "Latin/scientific name used for plant identification and care data lookup",
+                "common_name": "Common name or nickname for the plant (e.g., 'Snake Plant' for Sansevieria)"
+              }
+            },
+            "categories_section": {
+              "name": "Categories",
+              "description": "Plant family classifications, add as many as required",
+              "data": {
+                "categories": "Categories"
+              },
+              "data_description": {
+                "categories": "Plant family classifications, add as many as required"
+              }
+            },
+            "temperature_values_section": {
+              "name": "Temperature Requirements",
+              "description": "Set the ideal temperature range for your plant. Sensors can monitor if conditions are within these thresholds.",
+              "data": {
+                "min_temp": "Minimum Temperature",
+                "max_temp": "Maximum Temperature"
+              }
+            },
+            "light_values_section": {
+              "name": "Light Requirements",
+              "description": "Configure light levels in lux. These values help determine if your plant is getting adequate lighting.",
+              "data": {
+                "min_light": "Minimum Light Level",
+                "max_light": "Maximum Light Level"
+              }
+            },
+            "moisture_values_section": {
+              "name": "Soil Moisture Requirements",
+              "description": "Set moisture percentage thresholds to monitor when your plant needs watering or if soil is too wet.",
+              "data": {
+                "min_moisture": "Minimum Soil Moisture",
+                "max_moisture": "Maximum Soil Moisture"
+              }
+            },
+            "humidity_values_section": {
+              "name": "Humidity Requirements",
+              "description": "Configure the ideal humidity range. Many houseplants benefit from higher humidity than typical indoor levels.",
+              "data": {
+                "min_humidity": "Minimum Humidity",
+                "max_humidity": "Maximum Humidity"
+              }
+            },
+            "soil_ec_values_section": {
+              "name": "Soil EC Requirements",
+              "description": "Electrical conductivity (EC) indicates nutrient levels in soil. Higher EC means more nutrients are available.",
+              "data": {
+                "min_soil_ec": "Minimum Soil EC",
+                "max_soil_ec": "Maximum Soil EC"
+              }
+            }
+          }
+        },
+        "configure_plant_options": {
+          "title": "Update Plant Configuration",
+          "description": "Update configuration for {plant_name}",
+          "data": {
+            "friendly_name": "Friendly Name",
+            "scientific_name": "Scientific Name",
+            "common_name": "Common Name",
+            "categories": "Categories",
+            "min_light": "Minimum Light Level",
+            "max_light": "Maximum Light Level",
+            "min_temp": "Minimum Temperature",
+            "max_temp": "Maximum Temperature",
+            "min_humidity": "Minimum Humidity",
+            "max_humidity": "Maximum Humidity",
+            "min_moisture": "Minimum Soil Moisture",
+            "max_moisture": "Maximum Soil Moisture",
+            "min_soil_ec": "Minimum Soil EC",
+            "max_soil_ec": "Maximum Soil EC"
+          },
+          "data_description": {
+            "friendly_name": "Display name for this plant in Home Assistant. This is what you'll see in the UI",
+            "scientific_name": "Latin/scientific name used for plant identification and care data lookup",
+            "common_name": "Common name or nickname for the plant (e.g., 'Snake Plant' for Sansevieria)",
+            "categories": "Plant family classifications, add as many as required"
+          },
+          "sections": {
+            "names_section": {
+              "name": "Names",
+              "description": "Configure how this plant will be identified in Home Assistant",
+              "data": {
+                "friendly_name": "Friendly Name",
+                "scientific_name": "Scientific Name",
+                "common_name": "Common Name"
+              },
+              "data_description": {
+                "friendly_name": "Display name for this plant in Home Assistant. This is what you'll see in the UI",
+                "scientific_name": "Latin/scientific name used for plant identification and care data lookup",
+                "common_name": "Common name or nickname for the plant (e.g., 'Snake Plant' for Sansevieria)"
+              }
+            },
+            "categories_section": {
+              "name": "Categories",
+              "description": "Plant family classifications, add as many as required",
+              "data": {
+                "categories": "Categories"
+              },
+              "data_description": {
+                "categories": "Plant family classifications, add as many as required"
+              }
+            },
+            "temperature_values_section": {
+              "name": "Temperature Requirements",
+              "description": "Set the ideal temperature range for your plant. Sensors can monitor if conditions are within these thresholds.",
+              "data": {
+                "min_temp": "Minimum Temperature",
+                "max_temp": "Maximum Temperature"
+              }
+            },
+            "light_values_section": {
+              "name": "Light Requirements",
+              "description": "Configure light levels in lux. These values help determine if your plant is getting adequate lighting.",
+              "data": {
+                "min_light": "Minimum Light Level",
+                "max_light": "Maximum Light Level"
+              }
+            },
+            "moisture_values_section": {
+              "name": "Soil Moisture Requirements",
+              "description": "Set moisture percentage thresholds to monitor when your plant needs watering or if soil is too wet.",
+              "data": {
+                "min_moisture": "Minimum Soil Moisture",
+                "max_moisture": "Maximum Soil Moisture"
+              }
+            },
+            "humidity_values_section": {
+              "name": "Humidity Requirements",
+              "description": "Configure the ideal humidity range. Many houseplants benefit from higher humidity than typical indoor levels.",
+              "data": {
+                "min_humidity": "Minimum Humidity",
+                "max_humidity": "Maximum Humidity"
+              }
+            },
+            "soil_ec_values_section": {
+              "name": "Soil EC Requirements",
+              "description": "Electrical conductivity (EC) indicates nutrient levels in soil. Higher EC means more nutrients are available.",
+              "data": {
+                "min_soil_ec": "Minimum Soil EC",
+                "max_soil_ec": "Maximum Soil EC"
+              }
+            }
+          }
+        }
+      },
+      "error": {
+        "plant_name_required": "Plant name is required",
+        "search_error": "Error searching for plants",
+        "invalid_selection": "Invalid plant selection",
+        "no_plant_selected": "Please select a plant",
+        "friendly_name_required": "Friendly name is required",
+        "scientific_name_required": "Scientific name is required",
+        "common_name_required": "Common name is required",
+        "categories_required": "At least one category is required",
+        "min_light_required": "Minimum light level is required",
+        "max_light_required": "Maximum light level is required",
+        "min_temp_required": "Minimum temperature is required",
+        "max_temp_required": "Maximum temperature is required",
+        "min_humidity_required": "Minimum humidity is required",
+        "max_humidity_required": "Maximum humidity is required",
+        "min_moisture_required": "Minimum soil moisture is required",
+        "max_moisture_required": "Maximum soil moisture is required",
+        "min_soil_ec_required": "Minimum soil EC is required",
+        "max_soil_ec_required": "Maximum soil EC is required",
+        "min_greater_than_max_light": "Minimum light cannot be greater than maximum light",
+        "min_equals_max_light": "Minimum and maximum light cannot be equal",
+        "min_greater_than_max_temperature": "Minimum temperature cannot be greater than maximum temperature",
+        "min_equals_max_temperature": "Minimum and maximum temperature cannot be equal",
+        "min_greater_than_max_humidity": "Minimum humidity cannot be greater than maximum humidity",
+        "min_equals_max_humidity": "Minimum and maximum humidity cannot be equal",
+        "min_greater_than_max_moisture": "Minimum moisture cannot be greater than maximum moisture",
+        "min_equals_max_moisture": "Minimum and maximum moisture cannot be equal",
+        "min_greater_than_max_soil_ec": "Minimum soil EC cannot be greater than maximum soil EC",
+        "min_equals_max_soil_ec": "Minimum and maximum soil EC cannot be equal"
+      },
+      "abort": {
+        "already_configured": "This configuration already exists",
+        "reauth_required": "Reauthentication required",
+        "reconfigure_successful": "Plant configuration updated successfully"
+      }
+    }
+  },
+  "selector": {
+    "action": {
+      "options": {
+        "manual_entry": "Enter plant details manually",
+        "search_again": "Search again with different name"
+      }
+    },
+    "selected_plant": {
+      "options": {
+        "manual_entry": "None of these - Enter plant manually",
+        "search_again": "Search again with different name"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "plant": {
+        "name": "Plant"
+      }
+    }
+  }
+}
