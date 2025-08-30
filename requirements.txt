@@ -1,7 +1,7 @@
 colorlog==6.9.0
 homeassistant==2025.8.3
 pip>=21.3.1
-ruff==0.12.9
+ruff==0.12.11
 debugpy==1.8.16
 pytest>=7.0.0
 pytest-cov
