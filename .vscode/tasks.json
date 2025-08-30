@@ -4,11 +4,10 @@
         {
             "label": "Install Dependencies",
             "type": "shell",
-            "command": "pip",
+            "command": "bash",
             "args": [
-                "install",
-                "-r",
-                "requirements.txt"
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt"
             ],
             "group": "build",
             "presentation": {
@@ -22,11 +21,10 @@
         {
             "label": "Start Home Assistant (Development)",
             "type": "shell",
-            "command": "hass",
+            "command": "bash",
             "args": [
-                "--config",
-                "${workspaceFolder}/config",
-                "--debug"
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && hass --config ${workspaceFolder}/config --debug"
             ],
             "group": "build",
             "presentation": {
@@ -57,12 +55,10 @@
         {
             "label": "Run Tests",
             "type": "shell",
-            "command": "python",
+            "command": "bash",
             "args": [
-                "-m",
-                "pytest",
-                "tests/",
-                "-v"
+                "-c",
+                "source ${workspaceFolder}/.venv/bin/activate && python -m pytest tests/ -v"
             ],
             "group": "test",
             "presentation": {
@@ -79,7 +75,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "ruff format . && ruff check . --fix"
+                "source ${workspaceFolder}/.venv/bin/activate && ruff format . && ruff check . --fix"
             ],
             "group": "build"
         }

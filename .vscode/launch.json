@@ -48,6 +48,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "pytest",
+            "python": "${workspaceFolder}/.venv/bin/python",
             "args": [
                 "${workspaceFolder}/tests/",
                 "-v"
