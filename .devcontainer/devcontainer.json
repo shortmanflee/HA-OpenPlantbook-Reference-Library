@@ -9,7 +9,7 @@
     "postStartCommand": [
         "bash",
         "-c",
-        "echo 'source /workspaces/HA-OpenPlantbook-Reference-Library/.venv/bin/activate' >> ~/.bashrc"
+        "echo 'source ${workspaceFolder}/.venv/bin/activate' >> ~/.bashrc"
     ],
     "forwardPorts": [
         8080
